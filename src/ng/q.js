@@ -380,8 +380,7 @@ function qFactory(nextTick, exceptionHandler, errorOnUnhandledRejections) {
       var toCheck = checkQueue.shift();
       if (!toCheck.pur) {
         toCheck.pur = true;
-        var errorMessage = 'Possibly unhandled rejection: ' + toDebugString(toCheck.value);
-        exceptionHandler(errorMessage);
+        exceptionHandler(toCheck.value);
       }
     }
   }

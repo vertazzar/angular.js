@@ -186,6 +186,19 @@ describe('filters', function() {
 
       expect(currency(1.07)).toBe('$1.1');
     }));
+
+    it('should trim whitespace around the currency symbol if it is empty',
+      inject(function($locale) {
+        var pattern = $locale.NUMBER_FORMATS.PATTERNS[1];
+        pattern.posPre = pattern.posSuf = '     \u00A4     ';
+        pattern.negPre = pattern.negSuf = '  -  \u00A4  -  ';
+
+        expect(currency(+1.07, '$')).toBe('     $     1.07     $     ');
+        expect(currency(-1.07, '$')).toBe('  -  $  -  1.07  -  $  -  ');
+        expect(currency(+1.07, '')).toBe('1.07');
+        expect(currency(-1.07, '')).toBe('  --  1.07  --  ');
+      })
+    );
   });
 
   describe('number', function() {
@@ -502,6 +515,10 @@ describe('filters', function() {
 
     it('should parse format ending with non-replaced string', function() {
       expect(date(morning, 'yy/xxx')).toEqual('10/xxx');
+    });
+
+    it('should allow newlines in format', function() {
+      expect(date(midnight, 'EEE\nMMM d\'\n\'yy/xxx\n')).toEqual('Fri\nSep 3\n10/xxx\n');
     });
 
     it('should support various iso8061 date strings with timezone as input', function() {

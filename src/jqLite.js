@@ -32,29 +32,30 @@
  *
  * If jQuery is available, `angular.element` is an alias for the
  * [jQuery](http://api.jquery.com/jQuery/) function. If jQuery is not available, `angular.element`
- * delegates to Angular's built-in subset of jQuery, called "jQuery lite" or **jqLite**.
+ * delegates to AngularJS's built-in subset of jQuery, called "jQuery lite" or **jqLite**.
  *
  * jqLite is a tiny, API-compatible subset of jQuery that allows
- * Angular to manipulate the DOM in a cross-browser compatible way. jqLite implements only the most
+ * AngularJS to manipulate the DOM in a cross-browser compatible way. jqLite implements only the most
  * commonly needed functionality with the goal of having a very small footprint.
  *
  * To use `jQuery`, simply ensure it is loaded before the `angular.js` file. You can also use the
  * {@link ngJq `ngJq`} directive to specify that jqlite should be used over jQuery, or to use a
  * specific version of jQuery if multiple versions exist on the page.
  *
- * <div class="alert alert-info">**Note:** All element references in Angular are always wrapped with jQuery or
+ * <div class="alert alert-info">**Note:** All element references in AngularJS are always wrapped with jQuery or
  * jqLite (such as the element argument in a directive's compile / link function). They are never raw DOM references.</div>
  *
  * <div class="alert alert-warning">**Note:** Keep in mind that this function will not find elements
  * by tag name / CSS selector. For lookups by tag name, try instead `angular.element(document).find(...)`
  * or `$document.find()`, or use the standard DOM APIs, e.g. `document.querySelectorAll()`.</div>
  *
- * ## Angular's jqLite
+ * ## AngularJS's jqLite
  * jqLite provides only the following jQuery methods:
  *
  * - [`addClass()`](http://api.jquery.com/addClass/) - Does not support a function as first argument
  * - [`after()`](http://api.jquery.com/after/)
- * - [`append()`](http://api.jquery.com/append/)
+ * - [`append()`](http://api.jquery.com/append/) - Contrary to jQuery, this doesn't clone elements
+ *   so will not work correctly when invoked on a jqLite object containing more than one DOM node
  * - [`attr()`](http://api.jquery.com/attr/) - Does not support functions as parameters
  * - [`bind()`](http://api.jquery.com/bind/) (_deprecated_, use [`on()`](http://api.jquery.com/on/)) - Does not support namespaces, selectors or eventData
  * - [`children()`](http://api.jquery.com/children/) - Does not support selectors
@@ -90,7 +91,7 @@
  * - [`wrap()`](http://api.jquery.com/wrap/)
  *
  * ## jQuery/jqLite Extras
- * Angular also provides the following additional methods and events to both jQuery and jqLite:
+ * AngularJS also provides the following additional methods and events to both jQuery and jqLite:
  *
  * ### Events
  * - `$destroy` - AngularJS intercepts all jqLite/jQuery's DOM destruction apis and fires this event
@@ -201,12 +202,6 @@ function jqLiteHasData(node) {
   return false;
 }
 
-function jqLiteCleanData(nodes) {
-  for (var i = 0, ii = nodes.length; i < ii; i++) {
-    jqLiteRemoveData(nodes[i]);
-  }
-}
-
 function jqLiteBuildFragment(html, context) {
   var tmp, tag, wrap,
       fragment = context.createDocumentFragment(),
@@ -309,13 +304,32 @@ function jqLiteClone(element) {
 }
 
 function jqLiteDealoc(element, onlyDescendants) {
-  if (!onlyDescendants) jqLiteRemoveData(element);
+  if (!onlyDescendants && jqLiteAcceptsData(element)) jqLite.cleanData([element]);
 
   if (element.querySelectorAll) {
-    var descendants = element.querySelectorAll('*');
-    for (var i = 0, l = descendants.length; i < l; i++) {
-      jqLiteRemoveData(descendants[i]);
-    }
+    jqLite.cleanData(element.querySelectorAll('*'));
+  }
+}
+
+function isEmptyObject(obj) {
+  var name;
+
+  for (name in obj) {
+    return false;
+  }
+  return true;
+}
+
+function removeIfEmptyData(element) {
+  var expandoId = element.ng339;
+  var expandoStore = expandoId && jqCache[expandoId];
+
+  var events = expandoStore && expandoStore.events;
+  var data = expandoStore && expandoStore.data;
+
+  if ((!data || isEmptyObject(data)) && (!events || isEmptyObject(events))) {
+    delete jqCache[expandoId];
+    element.ng339 = undefined; // don't delete DOM expandos. IE and Chrome don't like it
   }
 }
 
@@ -355,6 +369,8 @@ function jqLiteOff(element, type, fn, unsupported) {
       }
     });
   }
+
+  removeIfEmptyData(element);
 }
 
 function jqLiteRemoveData(element, name) {
@@ -364,17 +380,11 @@ function jqLiteRemoveData(element, name) {
   if (expandoStore) {
     if (name) {
       delete expandoStore.data[name];
-      return;
+    } else {
+      expandoStore.data = {};
     }
 
-    if (expandoStore.handle) {
-      if (expandoStore.events.$destroy) {
-        expandoStore.handle({}, '$destroy');
-      }
-      jqLiteOff(element);
-    }
-    delete jqCache[expandoId];
-    element.ng339 = undefined; // don't delete DOM expandos. IE and Chrome don't like it
+    removeIfEmptyData(element);
   }
 }
 
@@ -429,13 +439,18 @@ function jqLiteHasClass(element, selector) {
 
 function jqLiteRemoveClass(element, cssClasses) {
   if (cssClasses && element.setAttribute) {
+    var existingClasses = (' ' + (element.getAttribute('class') || '') + ' ')
+                            .replace(/[\n\t]/g, ' ');
+    var newClasses = existingClasses;
+
     forEach(cssClasses.split(' '), function(cssClass) {
-      element.setAttribute('class', trim(
-          (' ' + (element.getAttribute('class') || '') + ' ')
-          .replace(/[\n\t]/g, ' ')
-          .replace(' ' + trim(cssClass) + ' ', ' '))
-      );
+      cssClass = trim(cssClass);
+      newClasses = newClasses.replace(' ' + cssClass + ' ', ' ');
     });
+
+    if (newClasses !== existingClasses) {
+      element.setAttribute('class', trim(newClasses));
+    }
   }
 }
 
@@ -443,15 +458,18 @@ function jqLiteAddClass(element, cssClasses) {
   if (cssClasses && element.setAttribute) {
     var existingClasses = (' ' + (element.getAttribute('class') || '') + ' ')
                             .replace(/[\n\t]/g, ' ');
+    var newClasses = existingClasses;
 
     forEach(cssClasses.split(' '), function(cssClass) {
       cssClass = trim(cssClass);
-      if (existingClasses.indexOf(' ' + cssClass + ' ') === -1) {
-        existingClasses += cssClass + ' ';
+      if (newClasses.indexOf(' ' + cssClass + ' ') === -1) {
+        newClasses += cssClass + ' ';
       }
     });
 
-    element.setAttribute('class', trim(existingClasses));
+    if (newClasses !== existingClasses) {
+      element.setAttribute('class', trim(newClasses));
+    }
   }
 }
 
@@ -613,7 +631,12 @@ forEach({
   data: jqLiteData,
   removeData: jqLiteRemoveData,
   hasData: jqLiteHasData,
-  cleanData: jqLiteCleanData
+  cleanData: function jqLiteCleanData(nodes) {
+    for (var i = 0, ii = nodes.length; i < ii; i++) {
+      jqLiteRemoveData(nodes[i]);
+      jqLiteOff(nodes[i]);
+    }
+  }
 }, function(fn, name) {
   JQLite[name] = fn;
 });

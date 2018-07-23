@@ -13,6 +13,8 @@ var semver = require('semver');
 var exec = require('shelljs').exec;
 var pkg = require(__dirname + '/package.json');
 
+var docsScriptFolder = 'scripts/docs.angularjs.org-firebase';
+
 // Node.js version checks
 if (!semver.satisfies(process.version, pkg.engines.node)) {
   reportOrFail('Invalid node version (' + process.version + '). ' +
@@ -49,7 +51,6 @@ if (!process.env.TRAVIS && !process.env.JENKINS_HOME) {
   }
 }
 
-
 module.exports = function(grunt) {
 
   // this loads all the node_modules that start with `grunt-` as plugins
@@ -63,6 +64,12 @@ module.exports = function(grunt) {
   var NG_VERSION = versionInfo.currentVersion;
   NG_VERSION.cdn = versionInfo.cdnVersion;
   var dist = 'angular-' + NG_VERSION.full;
+
+  var deployVersion = NG_VERSION.full;
+
+  if (NG_VERSION.isSnapshot) {
+    deployVersion = NG_VERSION.distTag === 'latest' ? 'snapshot-stable' : 'snapshot';
+  }
 
   if (versionInfo.cdnVersion == null) {
     throw new Error('Unable to read CDN version, are you offline or has the CDN not been properly pushed?\n' +
@@ -157,7 +164,12 @@ module.exports = function(grunt) {
 
     clean: {
       build: ['build'],
-      tmp: ['tmp']
+      tmp: ['tmp'],
+      deploy: [
+        'deploy/docs',
+        'deploy/code',
+        docsScriptFolder + '/functions/html'
+      ]
     },
 
     eslint: {
@@ -168,11 +180,11 @@ module.exports = function(grunt) {
           'docs/**/*.js',
           'lib/**/*.js',
           'scripts/**/*.js',
+          '!scripts/*/*/node_modules/**',
           'src/**/*.js',
           'test/**/*.js',
           'i18n/**/*.js',
           '!docs/app/assets/js/angular-bootstrap/**',
-          '!docs/bower_components/**',
           '!docs/config/templates/**',
           '!src/angular.bind.js',
           '!i18n/closure/**',
@@ -182,16 +194,6 @@ module.exports = function(grunt) {
     },
 
     build: {
-      scenario: {
-        dest: 'build/angular-scenario.js',
-        src: [
-          'bower_components/jquery/dist/jquery.js',
-          util.wrap([files['angularSrc'], files['angularScenario']], 'ngScenario/angular')
-        ],
-        styles: {
-          css: ['css/angular.css', 'css/angular-scenario.css']
-        }
-      },
       angular: {
         dest: 'build/angular.js',
         src: util.wrap([files['angularSrc']], 'angular'),
@@ -277,9 +279,7 @@ module.exports = function(grunt) {
       files: [
         'src/**/*.js',
         'test/**/*.js',
-        '!test/ngScenario/DescribeSpec.js',
         '!src/ng/directive/attrs.js', // legitimate xit here
-        '!src/ngScenario/**/*.js',
         '!test/helpers/privateMocks*.js'
       ],
       options: {
@@ -311,7 +311,54 @@ module.exports = function(grunt) {
     copy: {
       i18n: {
         files: [
-          { src: 'src/ngLocale/**', dest: 'build/i18n/', expand: true, flatten: true }
+          {
+            src: 'src/ngLocale/**',
+            dest: 'build/i18n/',
+            expand: true,
+            flatten: true
+          }
+        ]
+      },
+      deployFirebaseCode: {
+        files: [
+          // copy files that are not handled by compress
+          {
+            cwd: 'build',
+            src: '**/*.{zip,jpg,jpeg,png}',
+            dest: 'deploy/code/' + deployVersion + '/',
+            expand: true
+          }
+        ]
+      },
+      deployFirebaseDocs: {
+        files: [
+          // The source files are needed by the embedded examples in the docs app.
+          {
+            src: ['build/angular*.{js,js.map,min.js}', 'build/sitemap.xml'],
+            dest: 'deploy/docs/',
+            expand: true,
+            flatten: true
+          },
+          {
+            cwd: 'build/docs',
+            src: ['**', '!ptore2e/**', '!index*.html'],
+            dest: 'deploy/docs/',
+            expand: true
+          },
+          {
+            src: 'build/docs/index-production.html',
+            dest: 'deploy/docs/index.html'
+          },
+          {
+            src: 'build/docs/index-production.html',
+            dest: docsScriptFolder + '/functions/content/index.html'
+          },
+          {
+            cwd: 'build/docs',
+            src: 'partials/**',
+            dest: docsScriptFolder + '/functions/content',
+            expand: true
+          }
         ]
       }
     },
@@ -325,6 +372,16 @@ module.exports = function(grunt) {
         expand: true,
         dot: true,
         dest: dist + '/'
+      },
+      deployFirebaseCode: {
+        options: {
+          mode: 'gzip'
+        },
+        // Already compressed files should not be compressed again
+        src: ['**', '!**/*.{zip,png,jpeg,jpg}'],
+        cwd: 'build',
+        expand: true,
+        dest: 'deploy/code/' + deployVersion + '/'
       }
     },
 
@@ -359,24 +416,78 @@ module.exports = function(grunt) {
   });
 
   //alias tasks
-  grunt.registerTask('test', 'Run unit, docs and e2e tests with Karma', ['eslint', 'package', 'test:unit', 'test:promises-aplus', 'tests:docs', 'test:protractor']);
+  grunt.registerTask('test', 'Run unit, docs and e2e tests with Karma', [
+    'eslint',
+    'package',
+    'test:unit',
+    'test:promises-aplus',
+    'tests:docs',
+    'test:protractor'
+  ]);
   grunt.registerTask('test:jqlite', 'Run the unit tests with Karma' , ['tests:jqlite']);
   grunt.registerTask('test:jquery', 'Run the jQuery (latest) unit tests with Karma', ['tests:jquery']);
   grunt.registerTask('test:jquery-2.2', 'Run the jQuery 2.2 unit tests with Karma', ['tests:jquery-2.2']);
   grunt.registerTask('test:jquery-2.1', 'Run the jQuery 2.1 unit tests with Karma', ['tests:jquery-2.1']);
-  grunt.registerTask('test:modules', 'Run the Karma module tests with Karma', ['build', 'tests:modules']);
+  grunt.registerTask('test:modules', 'Run the Karma module tests with Karma', [
+    'build',
+    'tests:modules'
+  ]);
   grunt.registerTask('test:docs', 'Run the doc-page tests with Karma', ['package', 'tests:docs']);
-  grunt.registerTask('test:unit', 'Run unit, jQuery and Karma module tests with Karma', ['test:jqlite', 'test:jquery', 'test:jquery-2.2', 'test:jquery-2.1', 'test:modules']);
-  grunt.registerTask('test:protractor', 'Run the end to end tests with Protractor and keep a test server running in the background', ['webdriver', 'connect:testserver', 'protractor:normal']);
-  grunt.registerTask('test:travis-protractor', 'Run the end to end tests with Protractor for Travis CI builds', ['connect:testserver', 'protractor:travis']);
-  grunt.registerTask('test:ci-protractor', 'Run the end to end tests with Protractor for Jenkins CI builds', ['webdriver', 'connect:testserver', 'protractor:jenkins']);
+  grunt.registerTask('test:unit', 'Run unit, jQuery and Karma module tests with Karma', [
+    'test:jqlite',
+    'test:jquery',
+    'test:jquery-2.2',
+    'test:jquery-2.1',
+    'test:modules'
+  ]);
+  grunt.registerTask('test:protractor', 'Run the end to end tests with Protractor and keep a test server running in the background', [
+    'webdriver',
+    'connect:testserver',
+    'protractor:normal'
+  ]);
+  grunt.registerTask('test:travis-protractor', 'Run the end to end tests with Protractor for Travis CI builds', [
+    'connect:testserver',
+    'protractor:travis'
+  ]);
+  grunt.registerTask('test:ci-protractor', 'Run the end to end tests with Protractor for Jenkins CI builds', [
+    'webdriver',
+    'connect:testserver',
+    'protractor:jenkins'
+  ]);
   grunt.registerTask('test:e2e', 'Alias for test:protractor', ['test:protractor']);
-  grunt.registerTask('test:promises-aplus',['build:promises-aplus-adapter', 'shell:promises-aplus-tests']);
-
-  grunt.registerTask('minify', ['bower', 'clean', 'build', 'minall']);
+  grunt.registerTask('test:promises-aplus',[
+    'build:promises-aplus-adapter',
+    'shell:promises-aplus-tests'
+  ]);
+  grunt.registerTask('minify', [
+    'clean',
+    'build',
+    'minall'
+  ]);
   grunt.registerTask('webserver', ['connect:devserver']);
-  grunt.registerTask('package', ['bower', 'validate-angular-files', 'clean', 'buildall', 'minall', 'collect-errors', 'write', 'docs', 'copy', 'compress']);
-  grunt.registerTask('ci-checks', ['ddescribe-iit', 'merge-conflict', 'eslint']);
+  grunt.registerTask('package', [
+    'validate-angular-files',
+    'clean',
+    'buildall',
+    'minall',
+    'collect-errors',
+    'write',
+    'docs',
+    'copy:i18n',
+    'compress:build'
+  ]);
+  grunt.registerTask('ci-checks', [
+    'ddescribe-iit',
+    'merge-conflict',
+    'eslint'
+  ]);
+  grunt.registerTask('prepareDeploy', [
+    'package',
+    'compress:deployFirebaseCode',
+    'copy:deployFirebaseCode',
+    'firebaseDocsJsonForTravis',
+    'copy:deployFirebaseDocs'
+  ]);
   grunt.registerTask('default', ['package']);
 };
 

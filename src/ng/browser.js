@@ -22,62 +22,27 @@
  * @param {object} $log window.console or an object with the same interface.
  * @param {object} $sniffer $sniffer service
  */
-function Browser(window, document, $log, $sniffer) {
+function Browser(window, document, $log, $sniffer, $$taskTrackerFactory) {
   var self = this,
       location = window.location,
       history = window.history,
       setTimeout = window.setTimeout,
       clearTimeout = window.clearTimeout,
-      pendingDeferIds = {};
+      pendingDeferIds = {},
+      taskTracker = $$taskTrackerFactory($log);
 
   self.isMock = false;
 
-  var outstandingRequestCount = 0;
-  var outstandingRequestCallbacks = [];
+  //////////////////////////////////////////////////////////////
+  // Task-tracking API
+  //////////////////////////////////////////////////////////////
 
   // TODO(vojta): remove this temporary api
-  self.$$completeOutstandingRequest = completeOutstandingRequest;
-  self.$$incOutstandingRequestCount = function() { outstandingRequestCount++; };
+  self.$$completeOutstandingRequest = taskTracker.completeTask;
+  self.$$incOutstandingRequestCount = taskTracker.incTaskCount;
 
-  /**
-   * Executes the `fn` function(supports currying) and decrements the `outstandingRequestCallbacks`
-   * counter. If the counter reaches 0, all the `outstandingRequestCallbacks` are executed.
-   */
-  function completeOutstandingRequest(fn) {
-    try {
-      fn.apply(null, sliceArgs(arguments, 1));
-    } finally {
-      outstandingRequestCount--;
-      if (outstandingRequestCount === 0) {
-        while (outstandingRequestCallbacks.length) {
-          try {
-            outstandingRequestCallbacks.pop()();
-          } catch (e) {
-            $log.error(e);
-          }
-        }
-      }
-    }
-  }
-
-  function getHash(url) {
-    var index = url.indexOf('#');
-    return index === -1 ? '' : url.substr(index);
-  }
-
-  /**
-   * @private
-   * Note: this method is used only by scenario runner
-   * TODO(vojta): prefix this method with $$ ?
-   * @param {function()} callback Function that will be called when no outstanding request
-   */
-  self.notifyWhenNoOutstandingRequests = function(callback) {
-    if (outstandingRequestCount === 0) {
-      callback();
-    } else {
-      outstandingRequestCallbacks.push(callback);
-    }
-  };
+  // TODO(vojta): prefix this method with $$ ?
+  self.notifyWhenNoOutstandingRequests = taskTracker.notifyWhenNoPendingTasks;
 
   //////////////////////////////////////////////////////////////
   // URL API
@@ -96,7 +61,11 @@ function Browser(window, document, $log, $sniffer) {
       };
 
   cacheState();
-  lastHistoryState = cachedState;
+
+  function getHash(url) {
+    var index = url.indexOf('#');
+    return index === -1 ? '' : url.substr(index);
+  }
 
   /**
    * @name $browser#url
@@ -150,8 +119,6 @@ function Browser(window, document, $log, $sniffer) {
       if ($sniffer.history && (!sameBase || !sameState)) {
         history[replace ? 'replaceState' : 'pushState'](state, '', url);
         cacheState();
-        // Do the assignment again so that those two variables are referentially identical.
-        lastHistoryState = cachedState;
       } else {
         if (!sameBase) {
           pendingLocation = url;
@@ -176,8 +143,7 @@ function Browser(window, document, $log, $sniffer) {
       // - pendingLocation is needed as browsers don't allow to read out
       //   the new location.href if a reload happened or if there is a bug like in iOS 9 (see
       //   https://openradar.appspot.com/22186109).
-      // - the replacement is a workaround for https://bugzilla.mozilla.org/show_bug.cgi?id=407172
-      return pendingLocation || location.href.replace(/%27/g,'\'');
+      return pendingLocation || location.href;
     }
   };
 
@@ -200,8 +166,7 @@ function Browser(window, document, $log, $sniffer) {
 
   function cacheStateAndFireUrlChange() {
     pendingLocation = null;
-    cacheState();
-    fireUrlChange();
+    fireStateOrUrlChange();
   }
 
   // This variable should be used *only* inside the cacheState function.
@@ -215,11 +180,16 @@ function Browser(window, document, $log, $sniffer) {
     if (equals(cachedState, lastCachedState)) {
       cachedState = lastCachedState;
     }
+
     lastCachedState = cachedState;
+    lastHistoryState = cachedState;
   }
 
-  function fireUrlChange() {
-    if (lastBrowserUrl === self.url() && lastHistoryState === cachedState) {
+  function fireStateOrUrlChange() {
+    var prevLastHistoryState = lastHistoryState;
+    cacheState();
+
+    if (lastBrowserUrl === self.url() && prevLastHistoryState === cachedState) {
       return;
     }
 
@@ -236,7 +206,7 @@ function Browser(window, document, $log, $sniffer) {
    * @description
    * Register callback function that will be called, when url changes.
    *
-   * It's only called when the url is changed from outside of angular:
+   * It's only called when the url is changed from outside of AngularJS:
    * - user types different url into address bar
    * - user clicks on history (forward/back) button
    * - user clicks on a link
@@ -246,7 +216,7 @@ function Browser(window, document, $log, $sniffer) {
    * The listener gets called with new url as parameter.
    *
    * NOTE: this api is intended for use only by the $location service. Please use the
-   * {@link ng.$location $location service} to monitor url changes in angular apps.
+   * {@link ng.$location $location service} to monitor url changes in AngularJS apps.
    *
    * @param {function(string)} listener Listener function to be called when url changes.
    * @return {function(string)} Returns the registered listener fn - handy if the fn is anonymous.
@@ -254,8 +224,8 @@ function Browser(window, document, $log, $sniffer) {
   self.onUrlChange = function(callback) {
     // TODO(vojta): refactor to use node's syntax for events
     if (!urlChangeInit) {
-      // We listen on both (hashchange/popstate) when available, as some browsers (e.g. Opera)
-      // don't fire popstate when user change the address bar and don't fire hashchange when url
+      // We listen on both (hashchange/popstate) when available, as some browsers don't
+      // fire popstate when user changes the address bar and don't fire hashchange when url
       // changed by push/replaceState
 
       // html5 history api - popstate event
@@ -281,11 +251,11 @@ function Browser(window, document, $log, $sniffer) {
   };
 
   /**
-   * Checks whether the url has changed outside of Angular.
+   * Checks whether the url has changed outside of AngularJS.
    * Needs to be exported to be able to check for changes that have been done in sync,
    * as hashchange/popstate events fire in async.
    */
-  self.$$checkUrlChange = fireUrlChange;
+  self.$$checkUrlChange = fireStateOrUrlChange;
 
   //////////////////////////////////////////////////////////////
   // Misc API
@@ -308,7 +278,8 @@ function Browser(window, document, $log, $sniffer) {
   /**
    * @name $browser#defer
    * @param {function()} fn A function, who's execution should be deferred.
-   * @param {number=} [delay=0] of milliseconds to defer the function execution.
+   * @param {number=} [delay=0] Number of milliseconds to defer the function execution.
+   * @param {string=} [taskType=DEFAULT_TASK_TYPE] The type of task that is deferred.
    * @returns {*} DeferId that can be used to cancel the task via `$browser.defer.cancel()`.
    *
    * @description
@@ -319,14 +290,19 @@ function Browser(window, document, $log, $sniffer) {
    * via `$browser.defer.flush()`.
    *
    */
-  self.defer = function(fn, delay) {
+  self.defer = function(fn, delay, taskType) {
     var timeoutId;
-    outstandingRequestCount++;
+
+    delay = delay || 0;
+    taskType = taskType || taskTracker.DEFAULT_TASK_TYPE;
+
+    taskTracker.incTaskCount(taskType);
     timeoutId = setTimeout(function() {
       delete pendingDeferIds[timeoutId];
-      completeOutstandingRequest(fn);
-    }, delay || 0);
-    pendingDeferIds[timeoutId] = true;
+      taskTracker.completeTask(fn, taskType);
+    }, delay);
+    pendingDeferIds[timeoutId] = taskType;
+
     return timeoutId;
   };
 
@@ -342,10 +318,11 @@ function Browser(window, document, $log, $sniffer) {
    *                    canceled.
    */
   self.defer.cancel = function(deferId) {
-    if (pendingDeferIds[deferId]) {
+    if (pendingDeferIds.hasOwnProperty(deferId)) {
+      var taskType = pendingDeferIds[deferId];
       delete pendingDeferIds[deferId];
       clearTimeout(deferId);
-      completeOutstandingRequest(noop);
+      taskTracker.completeTask(noop, taskType);
       return true;
     }
     return false;
@@ -355,8 +332,8 @@ function Browser(window, document, $log, $sniffer) {
 
 /** @this */
 function $BrowserProvider() {
-  this.$get = ['$window', '$log', '$sniffer', '$document',
-      function($window, $log, $sniffer, $document) {
-        return new Browser($window, $document, $log, $sniffer);
-      }];
+  this.$get = ['$window', '$log', '$sniffer', '$document', '$$taskTrackerFactory',
+       function($window,   $log,   $sniffer,   $document,   $$taskTrackerFactory) {
+    return new Browser($window, $document, $log, $sniffer, $$taskTrackerFactory);
+  }];
 }

@@ -309,6 +309,16 @@ describe('Filter: orderBy', function() {
 
         expect(orderBy(items, expr)).toEqual(sorted);
       });
+
+      it('should consider null and undefined greater than any other value', function() {
+        var items = [undefined, null, 'z', {}, 999, false];
+        var expr = null;
+        var sorted = [false, 999, {}, 'z', null, undefined];
+        var reversed = [undefined, null, 'z', {}, 999, false];
+
+        expect(orderBy(items, expr)).toEqual(sorted);
+        expect(orderBy(items, expr, true)).toEqual(reversed);
+      });
     });
 
     describe('(custom comparator)', function() {
@@ -376,7 +386,7 @@ describe('Filter: orderBy', function() {
       });
 
 
-      it('should treat a value of `null` as `"null"`', function() {
+      it('should treat a value of `null` as type `"null"`', function() {
         var items = [null, null];
         var expr = null;
         var reverse = null;
@@ -386,8 +396,8 @@ describe('Filter: orderBy', function() {
         var arg = comparator.calls.argsFor(0)[0];
 
         expect(arg).toEqual(jasmine.objectContaining({
-          type: 'string',
-          value: 'null'
+          type: 'null',
+          value: null
         }));
       });
 
@@ -456,6 +466,19 @@ describe('Filter: orderBy', function() {
         };
 
         expect(orderBy(items, expr, reverse, comparator)).toEqual(sorted);
+      });
+
+      it('should use the default comparator to break ties on a provided comparator', function() {
+        // Some list that won't be sorted "naturally", i.e. should sort to ['a', 'B', 'c']
+        var items = ['c', 'a', 'B'];
+        var expr = null;
+        function comparator() {
+          return 0;
+        }
+        var reversed = ['B', 'a', 'c'];
+
+        expect(orderBy(items, expr, false, comparator)).toEqual(items);
+        expect(orderBy(items, expr, true, comparator)).toEqual(reversed);
       });
     });
 

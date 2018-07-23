@@ -64,12 +64,13 @@ function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDoc
       var jsonpDone = jsonpReq(url, callbackPath, function(status, text) {
         // jsonpReq only ever sets status to 200 (OK), 404 (ERROR) or -1 (WAITING)
         var response = (status === 200) && callbacks.getResponse(callbackPath);
-        completeRequest(callback, status, response, '', text);
+        completeRequest(callback, status, response, '', text, 'complete');
         callbacks.removeCallback(callbackPath);
       });
     } else {
 
       var xhr = createXhr(method, url);
+      var abortedByTimeout = false;
 
       xhr.open(method, url, true);
       forEach(headers, function(value, key) {
@@ -99,21 +100,32 @@ function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDoc
             status,
             response,
             xhr.getAllResponseHeaders(),
-            statusText);
+            statusText,
+            'complete');
       };
 
       var requestError = function() {
         // The response is always empty
         // See https://xhr.spec.whatwg.org/#request-error-steps and https://fetch.spec.whatwg.org/#concept-network-error
-        completeRequest(callback, -1, null, null, '');
+        completeRequest(callback, -1, null, null, '', 'error');
+      };
+
+      var requestAborted = function() {
+        completeRequest(callback, -1, null, null, '', abortedByTimeout ? 'timeout' : 'abort');
+      };
+
+      var requestTimeout = function() {
+        // The response is always empty
+        // See https://xhr.spec.whatwg.org/#request-error-steps and https://fetch.spec.whatwg.org/#concept-network-error
+        completeRequest(callback, -1, null, null, '', 'timeout');
       };
 
       xhr.onerror = requestError;
-      xhr.onabort = requestError;
-      xhr.ontimeout = requestError;
+      xhr.ontimeout = requestTimeout;
+      xhr.onabort = requestAborted;
 
       forEach(eventHandlers, function(value, key) {
-          xhr.addEventListener(key, value);
+        xhr.addEventListener(key, value);
       });
 
       forEach(uploadEventHandlers, function(value, key) {
@@ -144,14 +156,26 @@ function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDoc
       xhr.send(isUndefined(post) ? null : post);
     }
 
+    // Since we are using xhr.abort() when a request times out, we have to set a flag that
+    // indicates to requestAborted if the request timed out or was aborted.
+    //
+    // http.timeout = numerical timeout   timeout
+    // http.timeout = $timeout            timeout
+    // http.timeout = promise             abort
+    // xhr.abort()                        abort (The xhr object is normally inaccessible, but
+    //                                    can be exposed with the xhrFactory)
     if (timeout > 0) {
-      var timeoutId = $browserDefer(timeoutRequest, timeout);
+      var timeoutId = $browserDefer(function() {
+        timeoutRequest('timeout');
+      }, timeout);
     } else if (isPromiseLike(timeout)) {
-      timeout.then(timeoutRequest);
+      timeout.then(function() {
+        timeoutRequest(isDefined(timeout.$$timeoutId) ? 'timeout' : 'abort');
+      });
     }
 
-
-    function timeoutRequest() {
+    function timeoutRequest(reason) {
+      abortedByTimeout = reason === 'timeout';
       if (jsonpDone) {
         jsonpDone();
       }
@@ -160,14 +184,14 @@ function createHttpBackend($browser, createXhr, $browserDefer, callbacks, rawDoc
       }
     }
 
-    function completeRequest(callback, status, response, headersString, statusText) {
+    function completeRequest(callback, status, response, headersString, statusText, xhrStatus) {
       // cancel timeout and subsequent timeout promise resolution
       if (isDefined(timeoutId)) {
         $browserDefer.cancel(timeoutId);
       }
       jsonpDone = xhr = null;
 
-      callback(status, response, headersString, statusText);
+      callback(status, response, headersString, statusText, xhrStatus);
     }
   };
 

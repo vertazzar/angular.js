@@ -8,43 +8,42 @@ synchronizes data from your UI (view) with your JavaScript objects (model) throu
 binding. To help you structure your application better and make it easy to test, AngularJS teaches
 the browser how to do dependency injection and inversion of control.
 
-It also helps with server-side communication, taming async callbacks with promises and deferreds,
-and it makes client-side navigation and deeplinking with hashbang urls or HTML5 pushState a
+It also helps with server-side communication, taming async callbacks with promises and deferred objects,
+and it makes client-side navigation and deep linking with hashbang urls or HTML5 pushState a
 piece of cake. Best of all? It makes development fun!
+
+--------------------
+
+##### AngularJS will be moving to Long Term Support (LTS) mode on July 1st 2018: [Find out more](https://docs.angularjs.org/misc/version-support-status)
+
+##### Looking for the new Angular? Go here: https://github.com/angular/angular
+
+--------------------
 
 * Web site: https://angularjs.org
 * Tutorial: https://docs.angularjs.org/tutorial
 * API Docs: https://docs.angularjs.org/api
 * Developer Guide: https://docs.angularjs.org/guide
-* Contribution guidelines: [CONTRIBUTING.md](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md)
+* Contribution guidelines: [CONTRIBUTING.md](CONTRIBUTING.md)
+* Core Development: [DEVELOPERS.md](DEVELOPERS.md)
 * Dashboard: https://dashboard.angularjs.org
 
-##### Looking for Angular 2? Go here: https://github.com/angular/angular
 
-Building AngularJS
----------
-[Once you have set up your environment](https://docs.angularjs.org/misc/contribute), just run:
+Documentation
+--------------------
+Go to https://docs.angularjs.org
 
-    grunt package
-
-
-Running tests
--------------
-To execute all unit tests, use:
-
-    grunt test:unit
-
-To execute end-to-end (e2e) tests, use:
-
-    grunt package
-    grunt test:e2e
-
-To learn more about the grunt tasks, run `grunt --help`
-
-Contribute & Develop
+Contribute
 --------------------
 
-We've set up a separate document for our [contribution guidelines](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md).
+We've set up a separate document for our
+[contribution guidelines](https://github.com/angular/angular.js/blob/master/CONTRIBUTING.md).
+
+Develop
+--------------------
+
+We've set up a separate document for
+[developers](https://github.com/angular/angular.js/blob/master/DEVELOPERS.md).
 
 
 [![Analytics](https://ga-beacon.appspot.com/UA-8594346-11/angular.js/README.md?pixel)](https://github.com/igrigorik/ga-beacon)
@@ -80,7 +79,7 @@ HTML is also used to determine the wiring of the app. Special attributes in the 
 to load the app, which components or controllers to use for each element, etc. We specify "what"
 gets loaded, but not "how". This declarative approach greatly simplifies app development in a sort
 of WYSIWYG way. Rather than spending time on how the program flows and orchestrating the various
-moving parts, we simply define what we want and Angular will take care of the dependencies.
+moving parts, we simply define what we want and AngularJS will take care of the dependencies.
 
 #### Data Handling made simple
 Data and Data Models in AngularJS are plain JavaScript objects and one can add and change properties

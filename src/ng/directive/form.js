@@ -4,12 +4,14 @@
  */
 var nullFormCtrl = {
   $addControl: noop,
+  $getControls: valueFn([]),
   $$renameControl: nullFormRenameControl,
   $removeControl: noop,
   $setValidity: noop,
   $setDirty: noop,
   $setPristine: noop,
-  $setSubmitted: noop
+  $setSubmitted: noop,
+  $$setSubmitted: noop
 },
 PENDING_CLASS = 'ng-pending',
 SUBMITTED_CLASS = 'ng-submitted';
@@ -26,17 +28,23 @@ function nullFormRenameControl(control, name) {
  * @property {boolean} $dirty True if user has already interacted with the form.
  * @property {boolean} $valid True if all of the containing forms and controls are valid.
  * @property {boolean} $invalid True if at least one containing control or form is invalid.
- * @property {boolean} $pending True if at least one containing control or form is pending.
  * @property {boolean} $submitted True if user has submitted the form even if its invalid.
  *
- * @property {Object} $error Is an object hash, containing references to controls or
- *  forms with failing validators, where:
+ * @property {Object} $pending An object hash, containing references to controls or forms with
+ *  pending validators, where:
+ *
+ *  - keys are validations tokens (error names).
+ *  - values are arrays of controls or forms that have a pending validator for the given error name.
+ *
+ * See {@link form.FormController#$error $error} for a list of built-in validation tokens.
+ *
+ * @property {Object} $error An object hash, containing references to controls or forms with failing
+ *  validators, where:
  *
  *  - keys are validation tokens (error names),
- *  - values are arrays of controls or forms that have a failing validator for given error name.
+ *  - values are arrays of controls or forms that have a failing validator for the given error name.
  *
  *  Built-in validation tokens:
- *
  *  - `email`
  *  - `max`
  *  - `maxlength`
@@ -150,6 +158,30 @@ FormController.prototype = {
     }
 
     control.$$parentForm = this;
+  },
+
+  /**
+   * @ngdoc method
+   * @name form.FormController#$getControls
+   * @returns {Array} the controls that are currently part of this form
+   *
+   * @description
+   * This method returns a **shallow copy** of the controls that are currently part of this form.
+   * The controls can be instances of {@link form.FormController `FormController`}
+   * ({@link ngForm "child-forms"}) and of {@link ngModel.NgModelController `NgModelController`}.
+   * If you need access to the controls of child-forms, you have to call `$getControls()`
+   * recursively on them.
+   * This can be used for example to iterate over all controls to validate them.
+   *
+   * The controls can be accessed normally, but adding to, or removing controls from the array has
+   * no effect on the form. Instead, use {@link form.FormController#$addControl `$addControl()`} and
+   * {@link form.FormController#$removeControl `$removeControl()`} for this use-case.
+   * Likewise, adding a control to, or removing a control from the form is not reflected
+   * in the shallow copy. That means you should get a fresh copy from `$getControls()` every time
+   * you need access to the controls.
+   */
+  $getControls: function() {
+    return shallowCopy(this.$$controls);
   },
 
   // Private API: rename a form control
@@ -268,12 +300,25 @@ FormController.prototype = {
    * @name form.FormController#$setSubmitted
    *
    * @description
-   * Sets the form to its submitted state.
+   * Sets the form to its `$submitted` state. This will also set `$submitted` on all child and
+   * parent forms of the form.
    */
   $setSubmitted: function() {
+    var rootForm = this;
+    while (rootForm.$$parentForm && (rootForm.$$parentForm !== nullFormCtrl)) {
+      rootForm = rootForm.$$parentForm;
+    }
+    rootForm.$$setSubmitted();
+  },
+
+  $$setSubmitted: function() {
     this.$$animate.addClass(this.$$element, SUBMITTED_CLASS);
     this.$submitted = true;
-    this.$$parentForm.$setSubmitted();
+    forEach(this.$$controls, function(control) {
+      if (control.$$setSubmitted) {
+        control.$$setSubmitted();
+      }
+    });
   }
 };
 
@@ -282,9 +327,24 @@ FormController.prototype = {
  * @name form.FormController#$setValidity
  *
  * @description
- * Sets the validity of a form control.
+ * Change the validity state of the form, and notify the parent form (if any).
  *
- * This method will also propagate to parent forms.
+ * Application developers will rarely need to call this method directly. It is used internally, by
+ * {@link ngModel.NgModelController#$setValidity NgModelController.$setValidity()}, to propagate a
+ * control's validity state to the parent `FormController`.
+ *
+ * @param {string} validationErrorKey Name of the validator. The `validationErrorKey` will be
+ *        assigned to either `$error[validationErrorKey]` or `$pending[validationErrorKey]` (for
+ *        unfulfilled `$asyncValidators`), so that it is available for data-binding. The
+ *        `validationErrorKey` should be in camelCase and will get converted into dash-case for
+ *        class name. Example: `myError` will result in `ng-valid-my-error` and
+ *        `ng-invalid-my-error` classes and can be bound to as `{{ someForm.$error.myError }}`.
+ * @param {boolean} isValid Whether the current state is valid (true), invalid (false), pending
+ *        (undefined),  or skipped (null). Pending is used for unfulfilled `$asyncValidators`.
+ *        Skipped is used by AngularJS when validators do not run because of parse errors and when
+ *        `$asyncValidators` do not run because any of the `$validators` failed.
+ * @param {NgModelController | FormController} controller - The controller whose validity state is
+ *        triggering the change.
  */
 addSetValidityMethod({
   clazz: FormController,
@@ -317,16 +377,21 @@ addSetValidityMethod({
  * @restrict EAC
  *
  * @description
- * Nestable alias of {@link ng.directive:form `form`} directive. HTML
- * does not allow nesting of form elements. It is useful to nest forms, for example if the validity of a
- * sub-group of controls needs to be determined.
+ * Helper directive that makes it possible to create control groups inside a
+ * {@link ng.directive:form `form`} directive.
+ * These "child forms" can be used, for example, to determine the validity of a sub-group of
+ * controls.
  *
- * Note: the purpose of `ngForm` is to group controls,
- * but not to be a replacement for the `<form>` tag with all of its capabilities
- * (e.g. posting to the server, ...).
+ * <div class="alert alert-danger">
+ * **Note**: `ngForm` cannot be used as a replacement for `<form>`, because it lacks its
+ * [built-in HTML functionality](https://html.spec.whatwg.org/#the-form-element).
+ * Specifically, you cannot submit `ngForm` like a `<form>` tag. That means,
+ * you cannot send data to the server with `ngForm`, or integrate it with
+ * {@link ng.directive:ngSubmit `ngSubmit`}.
+ * </div>
  *
- * @param {string=} ngForm|name Name of the form. If specified, the form controller will be published into
- *                       related scope, under this name.
+ * @param {string=} ngForm|name Name of the form. If specified, the form controller will
+ *                              be published into the related scope, under this name.
  *
  */
 
@@ -342,15 +407,15 @@ addSetValidityMethod({
  * If the `name` attribute is specified, the form controller is published onto the current scope under
  * this name.
  *
- * # Alias: {@link ng.directive:ngForm `ngForm`}
+ * ## Alias: {@link ng.directive:ngForm `ngForm`}
  *
- * In Angular, forms can be nested. This means that the outer form is valid when all of the child
+ * In AngularJS, forms can be nested. This means that the outer form is valid when all of the child
  * forms are valid as well. However, browsers do not allow nesting of `<form>` elements, so
- * Angular provides the {@link ng.directive:ngForm `ngForm`} directive, which behaves identically to
+ * AngularJS provides the {@link ng.directive:ngForm `ngForm`} directive, which behaves identically to
  * `form` but can be nested. Nested forms can be useful, for example, if the validity of a sub-group
  * of controls needs to be determined.
  *
- * # CSS classes
+ * ## CSS classes
  *  - `ng-valid` is set if the form is valid.
  *  - `ng-invalid` is set if the form is invalid.
  *  - `ng-pending` is set if the form is pending.
@@ -361,14 +426,14 @@ addSetValidityMethod({
  * Keep in mind that ngAnimate can detect each of these classes when added and removed.
  *
  *
- * # Submitting a form and preventing the default action
+ * ## Submitting a form and preventing the default action
  *
- * Since the role of forms in client-side Angular applications is different than in classical
+ * Since the role of forms in client-side AngularJS applications is different than in classical
  * roundtrip apps, it is desirable for the browser not to translate the form submission into a full
  * page reload that sends the data to the server. Instead some javascript logic should be triggered
  * to handle the form submission in an application-specific way.
  *
- * For this reason, Angular prevents the default action (form submission to the server) unless the
+ * For this reason, AngularJS prevents the default action (form submission to the server) unless the
  * `<form>` element has an `action` attribute specified.
  *
  * You can use one of the following two ways to specify what javascript method should be called when
@@ -394,8 +459,7 @@ addSetValidityMethod({
  * submitted. Note that `ngClick` events will occur before the model is updated. Use `ngSubmit`
  * to have access to the updated model.
  *
- * ## Animation Hooks
- *
+ * @animations
  * Animations in ngForm are triggered when any of the associated CSS classes are added and removed.
  * These classes are: `.ng-pristine`, `.ng-dirty`, `.ng-invalid` and `.ng-valid` as well as any
  * other validations that are performed within the form. Animations in ngForm are similar to how

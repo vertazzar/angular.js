@@ -25,6 +25,8 @@
 
     /* angular.js */
     "angular": false,
+    "minErrConfig": false,
+    "errorHandlingConfig": false,
     "msie": false,
     "jqLite": false,
     "jQuery": false,
@@ -37,11 +39,10 @@
     "nodeName_": false,
     "uid": false,
     "toDebugString": false,
+    "serializeObject": false,
 
     "lowercase": false,
     "uppercase": false,
-    "manualLowercase": false,
-    "manualUppercase": false,
     "isArrayLike": false,
     "forEach": false,
     "reverseParams": false,
@@ -61,6 +62,7 @@
     "isNumber": false,
     "isNumberNaN": false,
     "isDate": false,
+    "isError": false,
     "isArray": false,
     "isFunction": false,
     "isRegExp": false,
@@ -143,11 +145,13 @@
 
     /* apis.js */
     "hashKey": false,
-    "HashMap": false,
+    "NgMapShim": false,
 
     /* urlUtils.js */
     "urlResolve": false,
     "urlIsSameOrigin": false,
+    "urlIsSameOriginAsBaseUrl": false,
+    "urlIsAllowedOriginFactory": false,
 
     /* karma */
     "dump": false,
@@ -172,6 +176,7 @@
     "browserSupportsCssAnimations": false,
     "browserTrigger": false,
     "jqLiteCacheSize": false,
-    "createAsync": false
+    "createAsync": false,
+    "support": false
   }
 }

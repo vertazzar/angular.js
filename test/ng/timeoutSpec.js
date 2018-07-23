@@ -280,8 +280,14 @@ describe('$timeout', function() {
     }));
 
 
-    it('should not throw a runtime exception when given an undefined promise', inject(function($timeout) {
+    it('should not throw an error when given an undefined promise', inject(function($timeout) {
       expect($timeout.cancel()).toBe(false);
+    }));
+
+
+    it('should throw an error when given a non-$timeout promise', inject(function($timeout) {
+      var promise = $timeout(noop).then(noop);
+      expect(function() { $timeout.cancel(promise); }).toThrowMinErr('$timeout', 'badprom');
     }));
 
 
@@ -298,6 +304,17 @@ describe('$timeout', function() {
       // Promise deferred object should already be removed from the list and not cancellable again
       $timeout.cancel(promise);
       expect(cancelSpy).toHaveBeenCalledOnce();
+    }));
+
+
+    it('should not trigger digest when cancelled', inject(function($timeout, $rootScope, $browser) {
+      var watchSpy = jasmine.createSpy('watchSpy');
+      $rootScope.$watch(watchSpy);
+
+      var t = $timeout();
+      $timeout.cancel(t);
+      expect(function() {$browser.defer.flush();}).toThrowError('No deferred tasks to be flushed');
+      expect(watchSpy).not.toHaveBeenCalled();
     }));
   });
 });

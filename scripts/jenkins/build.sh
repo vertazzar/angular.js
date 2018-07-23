@@ -12,7 +12,7 @@ set -xe
 # This is the default set of browsers to use on the CI server unless overridden via env variable
 if [[ -z "$BROWSERS" ]]
 then
-  BROWSERS="Chrome,Firefox,Opera,/Users/jenkins/bin/safari.sh"
+  BROWSERS="Chrome"
 fi
 
 # CLEAN #

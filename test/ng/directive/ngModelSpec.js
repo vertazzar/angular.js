@@ -6,7 +6,7 @@ describe('ngModel', function() {
 
   describe('NgModelController', function() {
     /* global NgModelController: false */
-    var ctrl, scope, ngModelAccessor, element, parentFormCtrl;
+    var ctrl, scope, element, parentFormCtrl;
 
     beforeEach(inject(function($rootScope, $controller) {
       var attrs = {name: 'testAlias', ngModel: 'value'};
@@ -21,7 +21,6 @@ describe('ngModel', function() {
       element = jqLite('<form><input></form>');
 
       scope = $rootScope;
-      ngModelAccessor = jasmine.createSpy('ngModel accessor');
       ctrl = $controller(NgModelController, {
         $scope: scope,
         $element: element.find('input'),
@@ -438,6 +437,13 @@ describe('ngModel', function() {
         expect(ctrl.$modelValue).toBe('c');
         expect(scope.value).toBe('c');
       }));
+
+
+      it('should not throw an error if the scope has been destroyed', function() {
+        scope.$destroy();
+        ctrl.$setViewValue('some-val');
+        expect(ctrl.$viewValue).toBe('some-val');
+      });
     });
 
 
@@ -603,6 +609,113 @@ describe('ngModel', function() {
         expect(ctrl.$modelValue).toBeNaN();
 
       }));
+
+      describe('$processModelValue', function() {
+        // Emulate setting the model on the scope
+        function setModelValue(ctrl, value) {
+          ctrl.$modelValue = ctrl.$$rawModelValue = value;
+          ctrl.$$parserValid = undefined;
+        }
+
+        it('should run the model -> view pipeline', function() {
+          var log = [];
+          var input = ctrl.$$element;
+
+          ctrl.$formatters.unshift(function(value) {
+            log.push(value);
+            return value + 2;
+          });
+
+          ctrl.$formatters.unshift(function(value) {
+            log.push(value);
+            return value + '';
+          });
+
+          spyOn(ctrl, '$render');
+
+          setModelValue(ctrl, 3);
+
+          expect(ctrl.$modelValue).toBe(3);
+
+          ctrl.$processModelValue();
+
+          expect(ctrl.$modelValue).toBe(3);
+          expect(log).toEqual([3, 5]);
+          expect(ctrl.$viewValue).toBe('5');
+          expect(ctrl.$render).toHaveBeenCalledOnce();
+        });
+
+        it('should add the validation and empty-state classes',
+          inject(function($compile, $rootScope, $animate) {
+            var input = $compile('<input name="myControl" maxlength="1" ng-model="value" >')($rootScope);
+            $rootScope.$digest();
+
+            spyOn($animate, 'addClass');
+            spyOn($animate, 'removeClass');
+
+            var ctrl = input.controller('ngModel');
+
+            expect(input).toHaveClass('ng-empty');
+            expect(input).toHaveClass('ng-valid');
+
+            setModelValue(ctrl, 3);
+            ctrl.$processModelValue();
+
+            // $animate adds / removes classes in the $$postDigest, which
+            // we cannot trigger with $digest, because that would set the model from the scope,
+            // so we simply check if the functions have been called
+            expect($animate.removeClass.calls.mostRecent().args[0][0]).toBe(input[0]);
+            expect($animate.removeClass.calls.mostRecent().args[1]).toBe('ng-empty');
+
+            expect($animate.addClass.calls.mostRecent().args[0][0]).toBe(input[0]);
+            expect($animate.addClass.calls.mostRecent().args[1]).toBe('ng-not-empty');
+
+            $animate.removeClass.calls.reset();
+            $animate.addClass.calls.reset();
+
+            setModelValue(ctrl, 35);
+            ctrl.$processModelValue();
+
+            expect($animate.addClass.calls.argsFor(1)[0][0]).toBe(input[0]);
+            expect($animate.addClass.calls.argsFor(1)[1]).toBe('ng-invalid');
+
+            expect($animate.addClass.calls.argsFor(2)[0][0]).toBe(input[0]);
+            expect($animate.addClass.calls.argsFor(2)[1]).toBe('ng-invalid-maxlength');
+          })
+        );
+
+        // this is analogue to $setViewValue
+        it('should run the model -> view pipeline even if the value has not changed', function() {
+          var log = [];
+
+          ctrl.$formatters.unshift(function(value) {
+            log.push(value);
+            return value + 2;
+          });
+
+          ctrl.$formatters.unshift(function(value) {
+            log.push(value);
+            return value + '';
+          });
+
+          spyOn(ctrl, '$render');
+
+          setModelValue(ctrl, 3);
+          ctrl.$processModelValue();
+
+          expect(ctrl.$modelValue).toBe(3);
+          expect(ctrl.$viewValue).toBe('5');
+          expect(log).toEqual([3, 5]);
+          expect(ctrl.$render).toHaveBeenCalledOnce();
+
+          ctrl.$processModelValue();
+          expect(ctrl.$modelValue).toBe(3);
+          expect(ctrl.$viewValue).toBe('5');
+          expect(log).toEqual([3, 5, 3, 5]);
+          // $render() is not called if the viewValue didn't change
+          expect(ctrl.$render).toHaveBeenCalledOnce();
+        });
+      });
     });
 
 
@@ -1271,13 +1384,13 @@ describe('ngModel', function() {
           }
         };
 
-        ctrl.$$parserName = 'parserOrValidator';
         ctrl.$parsers.push(function(value) {
           switch (value) {
             case 'allInvalid':
             case 'stillAllInvalid':
             case 'parseInvalid-validatorsValid':
             case 'stillParseInvalid-validatorsValid':
+              ctrl.$$parserName = 'parserOrValidator';
               return undefined;
             default:
               return value;
@@ -1336,6 +1449,48 @@ describe('ngModel', function() {
         expect(ctrl.$error).toEqual({parserOrValidator: true});
       });
 
+    });
+
+    describe('override ModelOptions', function() {
+      it('should replace the previous model options', function() {
+        var $options = ctrl.$options;
+        ctrl.$overrideModelOptions({});
+        expect(ctrl.$options).not.toBe($options);
+      });
+
+      it('should set the given options', function() {
+        var $options = ctrl.$options;
+        ctrl.$overrideModelOptions({ debounce: 1000, updateOn: 'blur' });
+        expect(ctrl.$options.getOption('debounce')).toEqual(1000);
+        expect(ctrl.$options.getOption('updateOn')).toEqual('blur');
+        expect(ctrl.$options.getOption('updateOnDefault')).toBe(false);
+      });
+
+      it('should inherit from a parent model options if specified', inject(function($compile, $rootScope) {
+        var element = $compile(
+          '<form name="form" ng-model-options="{debounce: 1000, updateOn: \'blur\'}">' +
+          '  <input ng-model="value" name="input">' +
+          '</form>')($rootScope);
+        var ctrl = $rootScope.form.input;
+        ctrl.$overrideModelOptions({ debounce: 2000, '*': '$inherit' });
+        expect(ctrl.$options.getOption('debounce')).toEqual(2000);
+        expect(ctrl.$options.getOption('updateOn')).toEqual('blur');
+        expect(ctrl.$options.getOption('updateOnDefault')).toBe(false);
+        dealoc(element);
+      }));
+
+      it('should not inherit from a parent model options if not specified', inject(function($compile, $rootScope) {
+        var element = $compile(
+          '<form name="form" ng-model-options="{debounce: 1000, updateOn: \'blur\'}">' +
+          '  <input ng-model="value" name="input">' +
+          '</form>')($rootScope);
+        var ctrl = $rootScope.form.input;
+        ctrl.$overrideModelOptions({ debounce: 2000 });
+        expect(ctrl.$options.getOption('debounce')).toEqual(2000);
+        expect(ctrl.$options.getOption('updateOn')).toEqual('');
+        expect(ctrl.$options.getOption('updateOnDefault')).toBe(true);
+        dealoc(element);
+      }));
     });
   });
 

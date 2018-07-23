@@ -174,11 +174,12 @@ describe('$httpBackend', function() {
   });
 
   it('should complete the request on timeout', function() {
-    callback.and.callFake(function(status, response, headers, statusText) {
+    callback.and.callFake(function(status, response, headers, statusText, xhrStatus) {
       expect(status).toBe(-1);
       expect(response).toBe(null);
       expect(headers).toBe(null);
       expect(statusText).toBe('');
+      expect(xhrStatus).toBe('timeout');
     });
     $backend('GET', '/url', null, callback, {});
     xhr = MockXhr.$$lastInstance;
@@ -189,7 +190,61 @@ describe('$httpBackend', function() {
     expect(callback).toHaveBeenCalledOnce();
   });
 
-  it('should abort request on timeout', function() {
+  it('should complete the request on abort', function() {
+    callback.and.callFake(function(status, response, headers, statusText, xhrStatus) {
+      expect(status).toBe(-1);
+      expect(response).toBe(null);
+      expect(headers).toBe(null);
+      expect(statusText).toBe('');
+      expect(xhrStatus).toBe('abort');
+    });
+    $backend('GET', '/url', null, callback, {});
+    xhr = MockXhr.$$lastInstance;
+
+    expect(callback).not.toHaveBeenCalled();
+
+    xhr.onabort();
+    expect(callback).toHaveBeenCalledOnce();
+  });
+
+  it('should complete the request on error', function() {
+    callback.and.callFake(function(status, response, headers, statusText, xhrStatus) {
+      expect(status).toBe(-1);
+      expect(response).toBe(null);
+      expect(headers).toBe(null);
+      expect(statusText).toBe('');
+      expect(xhrStatus).toBe('error');
+    });
+    $backend('GET', '/url', null, callback, {});
+    xhr = MockXhr.$$lastInstance;
+
+    expect(callback).not.toHaveBeenCalled();
+
+    xhr.onerror();
+    expect(callback).toHaveBeenCalledOnce();
+  });
+
+  it('should complete the request on success', function() {
+    callback.and.callFake(function(status, response, headers, statusText, xhrStatus) {
+      expect(status).toBe(200);
+      expect(response).toBe('response');
+      expect(headers).toBe('');
+      expect(statusText).toBe('');
+      expect(xhrStatus).toBe('complete');
+    });
+    $backend('GET', '/url', null, callback, {});
+    xhr = MockXhr.$$lastInstance;
+
+    expect(callback).not.toHaveBeenCalled();
+
+    xhr.statusText = '';
+    xhr.response = 'response';
+    xhr.status = 200;
+    xhr.onload();
+    expect(callback).toHaveBeenCalledOnce();
+  });
+
+  it('should abort request on numerical timeout', function() {
     callback.and.callFake(function(status, response) {
       expect(status).toBe(-1);
     });
@@ -209,9 +264,10 @@ describe('$httpBackend', function() {
   });
 
 
-  it('should abort request on timeout promise resolution', inject(function($timeout) {
-    callback.and.callFake(function(status, response) {
+  it('should abort request on $timeout promise resolution', inject(function($timeout) {
+    callback.and.callFake(function(status, response, headers, statusText, xhrStatus) {
       expect(status).toBe(-1);
+      expect(xhrStatus).toBe('timeout');
     });
 
     $backend('GET', '/url', null, callback, {}, $timeout(noop, 2000));
@@ -245,6 +301,24 @@ describe('$httpBackend', function() {
   }));
 
 
+  it('should abort request on canceler promise resolution', inject(function($q, $browser) {
+    var canceler = $q.defer();
+
+    callback.and.callFake(function(status, response, headers, statusText, xhrStatus) {
+      expect(status).toBe(-1);
+      expect(xhrStatus).toBe('abort');
+    });
+
+    $backend('GET', '/url', null, callback, {}, canceler.promise);
+    xhr = MockXhr.$$lastInstance;
+
+    canceler.resolve();
+    $browser.defer.flush();
+
+    expect(callback).toHaveBeenCalledOnce();
+  }));
+
+
   it('should cancel timeout on completion', function() {
     callback.and.callFake(function(status, response) {
       expect(status).toBe(200);
@@ -263,6 +337,22 @@ describe('$httpBackend', function() {
     expect($browser.deferredFns.length).toBe(0);
     expect(xhr.abort).not.toHaveBeenCalled();
   });
+
+
+  it('should call callback with xhrStatus "abort" on explicit xhr.abort() when $timeout is set', inject(function($timeout) {
+    callback.and.callFake(function(status, response, headers, statusText, xhrStatus) {
+      expect(status).toBe(-1);
+      expect(xhrStatus).toBe('abort');
+    });
+
+    $backend('GET', '/url', null, callback, {}, $timeout(noop, 2000));
+    xhr = MockXhr.$$lastInstance;
+    spyOn(xhr, 'abort').and.callThrough();
+
+    xhr.abort();
+
+    expect(callback).toHaveBeenCalledOnce();
+  }));
 
 
   it('should set withCredentials', function() {

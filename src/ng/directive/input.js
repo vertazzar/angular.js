@@ -45,10 +45,10 @@ var inputType = {
    * @name input[text]
    *
    * @description
-   * Standard HTML text input with angular data binding, inherited by most of the `input` elements.
+   * Standard HTML text input with AngularJS data binding, inherited by most of the `input` elements.
    *
    *
-   * @param {string} ngModel Assignable angular expression to data-bind to.
+   * @param {string} ngModel Assignable AngularJS expression to data-bind to.
    * @param {string=} name Property name of the form under which the control is published.
    * @param {string=} required Adds `required` validation error key if the value is not entered.
    * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
@@ -63,7 +63,7 @@ var inputType = {
    *    that contains the regular expression body that will be converted to a regular expression
    *    as in the ngPattern directive.
    * @param {string=} ngPattern Sets `pattern` validation error key if the ngModel {@link ngModel.NgModelController#$viewValue $viewValue}
-   *    does not match a RegExp found by evaluating the Angular expression given in the attribute value.
+   *    does not match a RegExp found by evaluating the AngularJS expression given in the attribute value.
    *    If the expression evaluates to a RegExp object, then this is used directly.
    *    If the expression evaluates to a string, then it will be converted to a RegExp
    *    after wrapping it in `^` and `$` characters. For instance, `"abc"` will be converted to
@@ -71,9 +71,9 @@ var inputType = {
    *    **Note:** Avoid using the `g` flag on the RegExp, as it will cause each successive search to
    *    start at the index of the last search's match, thus not taking the whole input value into
    *    account.
-   * @param {string=} ngChange Angular expression to be executed when input changes due to user
+   * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
    *    interaction with the input element.
-   * @param {boolean=} [ngTrim=true] If set to false Angular will not automatically trim the input.
+   * @param {boolean=} [ngTrim=true] If set to false AngularJS will not automatically trim the input.
    *    This parameter is ignored for input[type=password] controls, which will never trim the
    *    input.
    *
@@ -147,13 +147,13 @@ var inputType = {
      * modern browsers do not yet support this input type, it is important to provide cues to users on the
      * expected input format via a placeholder or label.
      *
-     * The model must always be a Date object, otherwise Angular will throw an error.
+     * The model must always be a Date object, otherwise AngularJS will throw an error.
      * Invalid `Date` objects (dates whose `getTime()` is `NaN`) will be rendered as an empty string.
      *
      * The timezone to be used to read/write the `Date` instance in the model can be defined using
      * {@link ng.directive:ngModelOptions ngModelOptions}. By default, this is the timezone of the browser.
      *
-     * @param {string} ngModel Assignable angular expression to data-bind to.
+     * @param {string} ngModel Assignable AngularJS expression to data-bind to.
      * @param {string=} name Property name of the form under which the control is published.
      * @param {string=} min Sets the `min` validation error key if the value entered is less than `min`. This must be a
      *   valid ISO date string (yyyy-MM-dd). You can also use interpolation inside this attribute
@@ -171,7 +171,7 @@ var inputType = {
      * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
      *    the element when the ngRequired expression evaluates to true. Use `ngRequired` instead of
      *    `required` when you want to data-bind to the `required` attribute.
-     * @param {string=} ngChange Angular expression to be executed when input changes due to user
+     * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
      *    interaction with the input element.
      *
      * @example
@@ -249,13 +249,17 @@ var inputType = {
     * the HTML5 date input, a text element will be used. In that case, the text must be entered in a valid ISO-8601
     * local datetime format (yyyy-MM-ddTHH:mm:ss), for example: `2010-12-28T14:57:00`.
     *
-    * The model must always be a Date object, otherwise Angular will throw an error.
+    * The model must always be a Date object, otherwise AngularJS will throw an error.
     * Invalid `Date` objects (dates whose `getTime()` is `NaN`) will be rendered as an empty string.
     *
     * The timezone to be used to read/write the `Date` instance in the model can be defined using
     * {@link ng.directive:ngModelOptions ngModelOptions}. By default, this is the timezone of the browser.
     *
-    * @param {string} ngModel Assignable angular expression to data-bind to.
+    * The format of the displayed time can be adjusted with the
+    * {@link ng.directive:ngModelOptions#ngModelOptions-arguments ngModelOptions} `timeSecondsFormat`
+    * and `timeStripZeroSeconds`.
+    *
+    * @param {string} ngModel Assignable AngularJS expression to data-bind to.
     * @param {string=} name Property name of the form under which the control is published.
     * @param {string=} min Sets the `min` validation error key if the value entered is less than `min`.
     *   This must be a valid ISO datetime format (yyyy-MM-ddTHH:mm:ss). You can also use interpolation
@@ -273,7 +277,7 @@ var inputType = {
     * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
     *    the element when the ngRequired expression evaluates to true. Use `ngRequired` instead of
     *    `required` when you want to data-bind to the `required` attribute.
-    * @param {string=} ngChange Angular expression to be executed when input changes due to user
+    * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
     *    interaction with the input element.
     *
     * @example
@@ -352,13 +356,18 @@ var inputType = {
    * local time format (HH:mm:ss), for example: `14:57:00`. Model must be a Date object. This binding will always output a
    * Date object to the model of January 1, 1970, or local date `new Date(1970, 0, 1, HH, mm, ss)`.
    *
-   * The model must always be a Date object, otherwise Angular will throw an error.
+   * The model must always be a Date object, otherwise AngularJS will throw an error.
    * Invalid `Date` objects (dates whose `getTime()` is `NaN`) will be rendered as an empty string.
    *
    * The timezone to be used to read/write the `Date` instance in the model can be defined using
-   * {@link ng.directive:ngModelOptions ngModelOptions}. By default, this is the timezone of the browser.
+   * {@link ng.directive:ngModelOptions#ngModelOptions-arguments ngModelOptions}. By default,
+   * this is the timezone of the browser.
    *
-   * @param {string} ngModel Assignable angular expression to data-bind to.
+   * The format of the displayed time can be adjusted with the
+   * {@link ng.directive:ngModelOptions#ngModelOptions-arguments ngModelOptions} `timeSecondsFormat`
+   * and `timeStripZeroSeconds`.
+   *
+   * @param {string} ngModel Assignable AngularJS expression to data-bind to.
    * @param {string=} name Property name of the form under which the control is published.
    * @param {string=} min Sets the `min` validation error key if the value entered is less than `min`.
    *   This must be a valid ISO time format (HH:mm:ss). You can also use interpolation inside this
@@ -376,7 +385,7 @@ var inputType = {
    * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
    *    the element when the ngRequired expression evaluates to true. Use `ngRequired` instead of
    *    `required` when you want to data-bind to the `required` attribute.
-   * @param {string=} ngChange Angular expression to be executed when input changes due to user
+   * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
    *    interaction with the input element.
    *
    * @example
@@ -454,13 +463,17 @@ var inputType = {
     * the HTML5 week input, a text element will be used. In that case, the text must be entered in a valid ISO-8601
     * week format (yyyy-W##), for example: `2013-W02`.
     *
-    * The model must always be a Date object, otherwise Angular will throw an error.
+    * The model must always be a Date object, otherwise AngularJS will throw an error.
     * Invalid `Date` objects (dates whose `getTime()` is `NaN`) will be rendered as an empty string.
+    *
+    * The value of the resulting Date object will be set to Thursday at 00:00:00 of the requested week,
+    * due to ISO-8601 week numbering standards. Information on ISO's system for numbering the weeks of the
+    * year can be found at: https://en.wikipedia.org/wiki/ISO_8601#Week_dates
     *
     * The timezone to be used to read/write the `Date` instance in the model can be defined using
     * {@link ng.directive:ngModelOptions ngModelOptions}. By default, this is the timezone of the browser.
     *
-    * @param {string} ngModel Assignable angular expression to data-bind to.
+    * @param {string} ngModel Assignable AngularJS expression to data-bind to.
     * @param {string=} name Property name of the form under which the control is published.
     * @param {string=} min Sets the `min` validation error key if the value entered is less than `min`.
     *   This must be a valid ISO week format (yyyy-W##). You can also use interpolation inside this
@@ -478,7 +491,7 @@ var inputType = {
     * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
     *    the element when the ngRequired expression evaluates to true. Use `ngRequired` instead of
     *    `required` when you want to data-bind to the `required` attribute.
-    * @param {string=} ngChange Angular expression to be executed when input changes due to user
+    * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
     *    interaction with the input element.
     *
     * @example
@@ -556,7 +569,7 @@ var inputType = {
    * the HTML5 month input, a text element will be used. In that case, the text must be entered in a valid ISO-8601
    * month format (yyyy-MM), for example: `2009-01`.
    *
-   * The model must always be a Date object, otherwise Angular will throw an error.
+   * The model must always be a Date object, otherwise AngularJS will throw an error.
    * Invalid `Date` objects (dates whose `getTime()` is `NaN`) will be rendered as an empty string.
    * If the model is not set to the first of the month, the next view to model update will set it
    * to the first of the month.
@@ -564,7 +577,7 @@ var inputType = {
    * The timezone to be used to read/write the `Date` instance in the model can be defined using
    * {@link ng.directive:ngModelOptions ngModelOptions}. By default, this is the timezone of the browser.
    *
-   * @param {string} ngModel Assignable angular expression to data-bind to.
+   * @param {string} ngModel Assignable AngularJS expression to data-bind to.
    * @param {string=} name Property name of the form under which the control is published.
    * @param {string=} min Sets the `min` validation error key if the value entered is less than `min`.
    *   This must be a valid ISO month format (yyyy-MM). You can also use interpolation inside this
@@ -583,7 +596,7 @@ var inputType = {
    * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
    *    the element when the ngRequired expression evaluates to true. Use `ngRequired` instead of
    *    `required` when you want to data-bind to the `required` attribute.
-   * @param {string=} ngChange Angular expression to be executed when input changes due to user
+   * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
    *    interaction with the input element.
    *
    * @example
@@ -661,12 +674,16 @@ var inputType = {
    * error if not a valid number.
    *
    * <div class="alert alert-warning">
-   * The model must always be of type `number` otherwise Angular will throw an error.
+   * The model must always be of type `number` otherwise AngularJS will throw an error.
    * Be aware that a string containing a number is not enough. See the {@link ngModel:numfmt}
    * error docs for more information and an example of how to convert your model if necessary.
    * </div>
    *
-   * ## Issues with HTML5 constraint validation
+   *
+   *
+   * @knownIssue
+   *
+   * ### HTML5 constraint validation and `allowInvalid`
    *
    * In browsers that follow the
    * [HTML5 specification](https://html.spec.whatwg.org/multipage/forms.html#number-state-%28type=number%29),
@@ -675,8 +692,19 @@ var inputType = {
    * which means the view / model values in `ngModel` and subsequently the scope value
    * will also be an empty string.
    *
+   * @knownIssue
    *
-   * @param {string} ngModel Assignable angular expression to data-bind to.
+   * ### Large numbers and `step` validation
+   *
+   * The `step` validation will not work correctly for very large numbers (e.g. 9999999999) due to
+   * Javascript's arithmetic limitations. If you need to handle large numbers, purpose-built
+   * libraries (e.g. https://github.com/MikeMcl/big.js/), can be included into AngularJS by
+   * {@link guide/forms#modifying-built-in-validators overwriting the validators}
+   * for `number` and / or `step`, or by {@link guide/forms#custom-validation applying custom validators}
+   * to an `input[text]` element. The source for `input[number]` type can be used as a starting
+   * point for both implementations.
+   *
+   * @param {string} ngModel Assignable AngularJS expression to data-bind to.
    * @param {string=} name Property name of the form under which the control is published.
    * @param {string=} min Sets the `min` validation error key if the value entered is less than `min`.
    *    Can be interpolated.
@@ -703,7 +731,7 @@ var inputType = {
    *    that contains the regular expression body that will be converted to a regular expression
    *    as in the ngPattern directive.
    * @param {string=} ngPattern Sets `pattern` validation error key if the ngModel {@link ngModel.NgModelController#$viewValue $viewValue}
-   *    does not match a RegExp found by evaluating the Angular expression given in the attribute value.
+   *    does not match a RegExp found by evaluating the AngularJS expression given in the attribute value.
    *    If the expression evaluates to a RegExp object, then this is used directly.
    *    If the expression evaluates to a string, then it will be converted to a RegExp
    *    after wrapping it in `^` and `$` characters. For instance, `"abc"` will be converted to
@@ -711,7 +739,7 @@ var inputType = {
    *    **Note:** Avoid using the `g` flag on the RegExp, as it will cause each successive search to
    *    start at the index of the last search's match, thus not taking the whole input value into
    *    account.
-   * @param {string=} ngChange Angular expression to be executed when input changes due to user
+   * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
    *    interaction with the input element.
    *
    * @example
@@ -786,7 +814,7 @@ var inputType = {
    * the built-in validators (see the {@link guide/forms Forms guide})
    * </div>
    *
-   * @param {string} ngModel Assignable angular expression to data-bind to.
+   * @param {string} ngModel Assignable AngularJS expression to data-bind to.
    * @param {string=} name Property name of the form under which the control is published.
    * @param {string=} required Sets `required` validation error key if the value is not entered.
    * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
@@ -801,7 +829,7 @@ var inputType = {
    *    that contains the regular expression body that will be converted to a regular expression
    *    as in the ngPattern directive.
    * @param {string=} ngPattern Sets `pattern` validation error key if the ngModel {@link ngModel.NgModelController#$viewValue $viewValue}
-   *    does not match a RegExp found by evaluating the Angular expression given in the attribute value.
+   *    does not match a RegExp found by evaluating the AngularJS expression given in the attribute value.
    *    If the expression evaluates to a RegExp object, then this is used directly.
    *    If the expression evaluates to a string, then it will be converted to a RegExp
    *    after wrapping it in `^` and `$` characters. For instance, `"abc"` will be converted to
@@ -809,7 +837,7 @@ var inputType = {
    *    **Note:** Avoid using the `g` flag on the RegExp, as it will cause each successive search to
    *    start at the index of the last search's match, thus not taking the whole input value into
    *    account.
-   * @param {string=} ngChange Angular expression to be executed when input changes due to user
+   * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
    *    interaction with the input element.
    *
    * @example
@@ -885,7 +913,7 @@ var inputType = {
    * use `ng-pattern` or modify the built-in validators (see the {@link guide/forms Forms guide})
    * </div>
    *
-   * @param {string} ngModel Assignable angular expression to data-bind to.
+   * @param {string} ngModel Assignable AngularJS expression to data-bind to.
    * @param {string=} name Property name of the form under which the control is published.
    * @param {string=} required Sets `required` validation error key if the value is not entered.
    * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
@@ -900,7 +928,7 @@ var inputType = {
    *    that contains the regular expression body that will be converted to a regular expression
    *    as in the ngPattern directive.
    * @param {string=} ngPattern Sets `pattern` validation error key if the ngModel {@link ngModel.NgModelController#$viewValue $viewValue}
-   *    does not match a RegExp found by evaluating the Angular expression given in the attribute value.
+   *    does not match a RegExp found by evaluating the AngularJS expression given in the attribute value.
    *    If the expression evaluates to a RegExp object, then this is used directly.
    *    If the expression evaluates to a string, then it will be converted to a RegExp
    *    after wrapping it in `^` and `$` characters. For instance, `"abc"` will be converted to
@@ -908,7 +936,7 @@ var inputType = {
    *    **Note:** Avoid using the `g` flag on the RegExp, as it will cause each successive search to
    *    start at the index of the last search's match, thus not taking the whole input value into
    *    account.
-   * @param {string=} ngChange Angular expression to be executed when input changes due to user
+   * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
    *    interaction with the input element.
    *
    * @example
@@ -976,14 +1004,41 @@ var inputType = {
    * @description
    * HTML radio button.
    *
-   * @param {string} ngModel Assignable angular expression to data-bind to.
+   * **Note:**<br>
+   * All inputs controlled by {@link ngModel ngModel} (including those of type `radio`) will use the
+   * value of their `name` attribute to determine the property under which their
+   * {@link ngModel.NgModelController NgModelController} will be published on the parent
+   * {@link form.FormController FormController}. Thus, if you use the same `name` for multiple
+   * inputs of a form (e.g. a group of radio inputs), only _one_ `NgModelController` will be
+   * published on the parent `FormController` under that name. The rest of the controllers will
+   * continue to work as expected, but you won't be able to access them as properties on the parent
+   * `FormController`.
+   *
+   * <div class="alert alert-info">
+   *   <p>
+   *     In plain HTML forms, the `name` attribute is used to identify groups of radio inputs, so
+   *     that the browser can manage their state (checked/unchecked) based on the state of other
+   *     inputs in the same group.
+   *   </p>
+   *   <p>
+   *     In AngularJS forms, this is not necessary. The input's state will be updated based on the
+   *     value of the underlying model data.
+   *   </p>
+   * </div>
+   *
+   * <div class="alert alert-success">
+   *   If you omit the `name` attribute on a radio input, `ngModel` will automatically assign it a
+   *   unique name.
+   * </div>
+   *
+   * @param {string} ngModel Assignable AngularJS expression to data-bind to.
    * @param {string} value The value to which the `ngModel` expression should be set when selected.
    *    Note that `value` only supports `string` values, i.e. the scope model needs to be a string,
    *    too. Use `ngValue` if you need complex models (`number`, `object`, ...).
    * @param {string=} name Property name of the form under which the control is published.
-   * @param {string=} ngChange Angular expression to be executed when input changes due to user
+   * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
    *    interaction with the input element.
-   * @param {string} ngValue Angular expression to which `ngModel` will be be set when the radio
+   * @param {string} ngValue AngularJS expression to which `ngModel` will be be set when the radio
    *    is selected. Should be used instead of the `value` attribute if you need
    *    a non-string `ngModel` (`boolean`, `array`, ...).
    *
@@ -1061,34 +1116,34 @@ var inputType = {
    * See the [HTML Spec on input[type=range]](https://www.w3.org/TR/html5/forms.html#range-state-(type=range))
    * for more info.
    *
-   * This has the following consequences for Angular:
+   * This has the following consequences for AngularJS:
    *
    * Since the element value should always reflect the current model value, a range input
    * will set the bound ngModel expression to the value that the browser has set for the
    * input element. For example, in the following input `<input type="range" ng-model="model.value">`,
    * if the application sets `model.value = null`, the browser will set the input to `'50'`.
-   * Angular will then set the model to `50`, to prevent input and model value being out of sync.
+   * AngularJS will then set the model to `50`, to prevent input and model value being out of sync.
    *
    * That means the model for range will immediately be set to `50` after `ngModel` has been
    * initialized. It also means a range input can never have the required error.
    *
    * This does not only affect changes to the model value, but also to the values of the `min`,
    * `max`, and `step` attributes. When these change in a way that will cause the browser to modify
-   * the input value, Angular will also update the model value.
+   * the input value, AngularJS will also update the model value.
    *
    * Automatic value adjustment also means that a range input element can never have the `required`,
    * `min`, or `max` errors.
    *
    * However, `step` is currently only fully implemented by Firefox. Other browsers have problems
    * when the step value changes dynamically - they do not adjust the element value correctly, but
-   * instead may set the `stepMismatch` error. If that's the case, the Angular will set the `step`
+   * instead may set the `stepMismatch` error. If that's the case, the AngularJS will set the `step`
    * error on the input, and set the model to `undefined`.
    *
    * Note that `input[range]` is not compatible with`ngMax`, `ngMin`, and `ngStep`, because they do
    * not set the `min` and `max` attributes, which means that the browser won't automatically adjust
    * the input value based on their values, and will always assume min = 0, max = 100, and step = 1.
    *
-   * @param {string}  ngModel Assignable angular expression to data-bind to.
+   * @param {string}  ngModel Assignable AngularJS expression to data-bind to.
    * @param {string=} name Property name of the form under which the control is published.
    * @param {string=} min Sets the `min` validation to ensure that the value entered is greater
    *                  than `min`. Can be interpolated.
@@ -1096,8 +1151,8 @@ var inputType = {
    *                  Can be interpolated.
    * @param {string=} step Sets the `step` validation to ensure that the value entered matches the `step`
    *                  Can be interpolated.
-   * @param {string=} ngChange Angular expression to be executed when the ngModel value changes due
-   *                  to user interaction with the input element.
+   * @param {expression=} ngChange AngularJS expression to be executed when the ngModel value changes due
+   *                      to user interaction with the input element.
    * @param {expression=} ngChecked If the expression is truthy, then the `checked` attribute will be set on the
    *                      element. **Note** : `ngChecked` should not be used alongside `ngModel`.
    *                      Checkout {@link ng.directive:ngChecked ngChecked} for usage.
@@ -1163,11 +1218,11 @@ var inputType = {
    * @description
    * HTML checkbox.
    *
-   * @param {string} ngModel Assignable angular expression to data-bind to.
+   * @param {string} ngModel Assignable AngularJS expression to data-bind to.
    * @param {string=} name Property name of the form under which the control is published.
    * @param {expression=} ngTrueValue The value to which the expression should be set when selected.
    * @param {expression=} ngFalseValue The value to which the expression should be set when not selected.
-   * @param {string=} ngChange Angular expression to be executed when input changes due to user
+   * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
    *    interaction with the input element.
    *
    * @example
@@ -1244,6 +1299,16 @@ function baseInputType(scope, element, attr, ctrl, $sniffer, $browser) {
       composing = true;
     });
 
+    // Support: IE9+
+    element.on('compositionupdate', function(ev) {
+      // End composition when ev.data is empty string on 'compositionupdate' event.
+      // When the input de-focusses (e.g. by clicking away), IE triggers 'compositionupdate'
+      // instead of 'compositionend'.
+      if (isUndefined(ev.data) || ev.data === '') {
+        composing = false;
+      }
+    });
+
     element.on('compositionend', function() {
       composing = false;
       listener();
@@ -1302,9 +1367,9 @@ function baseInputType(scope, element, attr, ctrl, $sniffer, $browser) {
       deferListener(event, this, this.value);
     });
 
-    // if user modifies input value using context menu in IE, we need "paste" and "cut" events to catch it
+    // if user modifies input value using context menu in IE, we need "paste", "cut" and "drop" events to catch it
     if ($sniffer.hasEvent('paste')) {
-      element.on('paste cut', deferListener);
+      element.on('paste cut drop', deferListener);
     }
   }
 
@@ -1374,7 +1439,7 @@ function weekParser(isoWeek, existingDate) {
 }
 
 function createDateParser(regexp, mapping) {
-  return function(iso, date) {
+  return function(iso, previousDate) {
     var parts, map;
 
     if (isDate(iso)) {
@@ -1396,15 +1461,15 @@ function createDateParser(regexp, mapping) {
 
       if (parts) {
         parts.shift();
-        if (date) {
+        if (previousDate) {
           map = {
-            yyyy: date.getFullYear(),
-            MM: date.getMonth() + 1,
-            dd: date.getDate(),
-            HH: date.getHours(),
-            mm: date.getMinutes(),
-            ss: date.getSeconds(),
-            sss: date.getMilliseconds() / 1000
+            yyyy: previousDate.getFullYear(),
+            MM: previousDate.getMonth() + 1,
+            dd: previousDate.getDate(),
+            HH: previousDate.getHours(),
+            mm: previousDate.getMinutes(),
+            ss: previousDate.getSeconds(),
+            sss: previousDate.getMilliseconds() / 1000
           };
         } else {
           map = { yyyy: 1970, MM: 1, dd: 1, HH: 0, mm: 0, ss: 0, sss: 0 };
@@ -1415,7 +1480,15 @@ function createDateParser(regexp, mapping) {
             map[mapping[index]] = +part;
           }
         });
-        return new Date(map.yyyy, map.MM - 1, map.dd, map.HH, map.mm, map.ss || 0, map.sss * 1000 || 0);
+
+        var date = new Date(map.yyyy, map.MM - 1, map.dd, map.HH, map.mm, map.ss || 0, map.sss * 1000 || 0);
+        if (map.yyyy < 100) {
+          // In the constructor, 2-digit years map to 1900-1999.
+          // Use `setFullYear()` to set the correct year.
+          date.setFullYear(map.yyyy);
+        }
+
+        return date;
       }
     }
 
@@ -1425,24 +1498,23 @@ function createDateParser(regexp, mapping) {
 
 function createDateInputType(type, regexp, parseDate, format) {
   return function dynamicDateInputType(scope, element, attr, ctrl, $sniffer, $browser, $filter) {
-    badInputChecker(scope, element, attr, ctrl);
+    badInputChecker(scope, element, attr, ctrl, type);
     baseInputType(scope, element, attr, ctrl, $sniffer, $browser);
-    var timezone = ctrl && ctrl.$options.getOption('timezone');
-    var previousDate;
 
-    ctrl.$$parserName = type;
+    var isTimeType = type === 'time' || type === 'datetimelocal';
+    var previousDate;
+    var previousTimezone;
+
     ctrl.$parsers.push(function(value) {
       if (ctrl.$isEmpty(value)) return null;
+
       if (regexp.test(value)) {
         // Note: We cannot read ctrl.$modelValue, as there might be a different
         // parser/formatter in the processing chain so that the model
         // contains some different data format!
-        var parsedDate = parseDate(value, previousDate);
-        if (timezone) {
-          parsedDate = convertTimezoneToLocal(parsedDate, timezone);
-        }
-        return parsedDate;
+        return parseDateAndConvertTimeZoneToLocal(value, previousDate);
       }
+      ctrl.$$parserName = type;
       return undefined;
     });
 
@@ -1452,12 +1524,17 @@ function createDateInputType(type, regexp, parseDate, format) {
       }
       if (isValidDate(value)) {
         previousDate = value;
-        if (previousDate && timezone) {
+        var timezone = ctrl.$options.getOption('timezone');
+
+        if (timezone) {
+          previousTimezone = timezone;
           previousDate = convertTimezoneToLocal(previousDate, timezone, true);
         }
-        return $filter('date')(value, format, timezone);
+
+        return formatter(value, timezone);
       } else {
         previousDate = null;
+        previousTimezone = null;
         return '';
       }
     });
@@ -1490,27 +1567,68 @@ function createDateInputType(type, regexp, parseDate, format) {
     }
 
     function parseObservedDateValue(val) {
-      return isDefined(val) && !isDate(val) ? parseDate(val) || undefined : val;
+      return isDefined(val) && !isDate(val) ? parseDateAndConvertTimeZoneToLocal(val) || undefined : val;
+    }
+
+    function parseDateAndConvertTimeZoneToLocal(value, previousDate) {
+      var timezone = ctrl.$options.getOption('timezone');
+
+      if (previousTimezone && previousTimezone !== timezone) {
+        // If the timezone has changed, adjust the previousDate to the default timezone
+        // so that the new date is converted with the correct timezone offset
+        previousDate = addDateMinutes(previousDate, timezoneToOffset(previousTimezone));
+      }
+
+      var parsedDate = parseDate(value, previousDate);
+
+      if (!isNaN(parsedDate) && timezone) {
+        parsedDate = convertTimezoneToLocal(parsedDate, timezone);
+      }
+      return parsedDate;
+    }
+
+    function formatter(value, timezone) {
+      var targetFormat = format;
+
+      if (isTimeType && isString(ctrl.$options.getOption('timeSecondsFormat'))) {
+        targetFormat = format
+          .replace('ss.sss', ctrl.$options.getOption('timeSecondsFormat'))
+          .replace(/:$/, '');
+      }
+
+      var formatted =  $filter('date')(value, targetFormat, timezone);
+
+      if (isTimeType && ctrl.$options.getOption('timeStripZeroSeconds')) {
+        formatted = formatted.replace(/(?::00)?(?:\.000)?$/, '');
+      }
+
+      return formatted;
     }
   };
 }
 
-function badInputChecker(scope, element, attr, ctrl) {
+function badInputChecker(scope, element, attr, ctrl, parserName) {
   var node = element[0];
   var nativeValidation = ctrl.$$hasNativeValidators = isObject(node.validity);
   if (nativeValidation) {
     ctrl.$parsers.push(function(value) {
       var validity = element.prop(VALIDITY_STATE_PROPERTY) || {};
-      return validity.badInput || validity.typeMismatch ? undefined : value;
+      if (validity.badInput || validity.typeMismatch) {
+        ctrl.$$parserName = parserName;
+        return undefined;
+      }
+
+      return value;
     });
   }
 }
 
 function numberFormatterParser(ctrl) {
-  ctrl.$$parserName = 'number';
   ctrl.$parsers.push(function(value) {
     if (ctrl.$isEmpty(value))      return null;
     if (NUMBER_REGEXP.test(value)) return parseFloat(value);
+
+    ctrl.$$parserName = 'number';
     return undefined;
   });
 
@@ -1565,22 +1683,34 @@ function isValidForStep(viewValue, stepBase, step) {
   // and `viewValue` is expected to be a valid stringified number.
   var value = Number(viewValue);
 
+  var isNonIntegerValue = !isNumberInteger(value);
+  var isNonIntegerStepBase = !isNumberInteger(stepBase);
+  var isNonIntegerStep = !isNumberInteger(step);
+
   // Due to limitations in Floating Point Arithmetic (e.g. `0.3 - 0.2 !== 0.1` or
   // `0.5 % 0.1 !== 0`), we need to convert all numbers to integers.
-  if (!isNumberInteger(value) || !isNumberInteger(stepBase) || !isNumberInteger(step)) {
-    var decimalCount = Math.max(countDecimals(value), countDecimals(stepBase), countDecimals(step));
+  if (isNonIntegerValue || isNonIntegerStepBase || isNonIntegerStep) {
+    var valueDecimals = isNonIntegerValue ? countDecimals(value) : 0;
+    var stepBaseDecimals = isNonIntegerStepBase ? countDecimals(stepBase) : 0;
+    var stepDecimals = isNonIntegerStep ? countDecimals(step) : 0;
+
+    var decimalCount = Math.max(valueDecimals, stepBaseDecimals, stepDecimals);
     var multiplier = Math.pow(10, decimalCount);
 
     value = value * multiplier;
     stepBase = stepBase * multiplier;
     step = step * multiplier;
+
+    if (isNonIntegerValue) value = Math.round(value);
+    if (isNonIntegerStepBase) stepBase = Math.round(stepBase);
+    if (isNonIntegerStep) step = Math.round(step);
   }
 
   return (value - stepBase) % step === 0;
 }
 
 function numberInputType(scope, element, attr, ctrl, $sniffer, $browser) {
-  badInputChecker(scope, element, attr, ctrl);
+  badInputChecker(scope, element, attr, ctrl, 'number');
   numberFormatterParser(ctrl);
   baseInputType(scope, element, attr, ctrl, $sniffer, $browser);
 
@@ -1588,8 +1718,8 @@ function numberInputType(scope, element, attr, ctrl, $sniffer, $browser) {
   var maxVal;
 
   if (isDefined(attr.min) || attr.ngMin) {
-    ctrl.$validators.min = function(value) {
-      return ctrl.$isEmpty(value) || isUndefined(minVal) || value >= minVal;
+    ctrl.$validators.min = function(modelValue, viewValue) {
+      return ctrl.$isEmpty(viewValue) || isUndefined(minVal) || viewValue >= minVal;
     };
 
     attr.$observe('min', function(val) {
@@ -1600,8 +1730,8 @@ function numberInputType(scope, element, attr, ctrl, $sniffer, $browser) {
   }
 
   if (isDefined(attr.max) || attr.ngMax) {
-    ctrl.$validators.max = function(value) {
-      return ctrl.$isEmpty(value) || isUndefined(maxVal) || value <= maxVal;
+    ctrl.$validators.max = function(modelValue, viewValue) {
+      return ctrl.$isEmpty(viewValue) || isUndefined(maxVal) || viewValue <= maxVal;
     };
 
     attr.$observe('max', function(val) {
@@ -1627,7 +1757,7 @@ function numberInputType(scope, element, attr, ctrl, $sniffer, $browser) {
 }
 
 function rangeInputType(scope, element, attr, ctrl, $sniffer, $browser) {
-  badInputChecker(scope, element, attr, ctrl);
+  badInputChecker(scope, element, attr, ctrl, 'range');
   numberFormatterParser(ctrl);
   baseInputType(scope, element, attr, ctrl, $sniffer, $browser);
 
@@ -1766,7 +1896,6 @@ function urlInputType(scope, element, attr, ctrl, $sniffer, $browser) {
   baseInputType(scope, element, attr, ctrl, $sniffer, $browser);
   stringBasedInputType(ctrl);
 
-  ctrl.$$parserName = 'url';
   ctrl.$validators.url = function(modelValue, viewValue) {
     var value = modelValue || viewValue;
     return ctrl.$isEmpty(value) || URL_REGEXP.test(value);
@@ -1779,7 +1908,6 @@ function emailInputType(scope, element, attr, ctrl, $sniffer, $browser) {
   baseInputType(scope, element, attr, ctrl, $sniffer, $browser);
   stringBasedInputType(ctrl);
 
-  ctrl.$$parserName = 'email';
   ctrl.$validators.email = function(modelValue, viewValue) {
     var value = modelValue || viewValue;
     return ctrl.$isEmpty(value) || EMAIL_REGEXP.test(value);
@@ -1804,7 +1932,7 @@ function radioInputType(scope, element, attr, ctrl) {
     }
   };
 
-  element.on('click', listener);
+  element.on('change', listener);
 
   ctrl.$render = function() {
     var value = attr.value;
@@ -1838,7 +1966,7 @@ function checkboxInputType(scope, element, attr, ctrl, $sniffer, $browser, $filt
     ctrl.$setViewValue(element[0].checked, ev && ev.type);
   };
 
-  element.on('click', listener);
+  element.on('change', listener);
 
   ctrl.$render = function() {
     element[0].checked = ctrl.$viewValue;
@@ -1867,11 +1995,11 @@ function checkboxInputType(scope, element, attr, ctrl, $sniffer, $browser, $filt
  * @restrict E
  *
  * @description
- * HTML textarea element control with angular data-binding. The data-binding and validation
+ * HTML textarea element control with AngularJS data-binding. The data-binding and validation
  * properties of this element are exactly the same as those of the
  * {@link ng.directive:input input element}.
  *
- * @param {string} ngModel Assignable angular expression to data-bind to.
+ * @param {string} ngModel Assignable AngularJS expression to data-bind to.
  * @param {string=} name Property name of the form under which the control is published.
  * @param {string=} required Sets `required` validation error key if the value is not entered.
  * @param {string=} ngRequired Adds `required` attribute and `required` validation constraint to
@@ -1883,7 +2011,7 @@ function checkboxInputType(scope, element, attr, ctrl, $sniffer, $browser, $filt
  *    maxlength. Setting the attribute to a negative or non-numeric value, allows view values of any
  *    length.
  * @param {string=} ngPattern Sets `pattern` validation error key if the ngModel {@link ngModel.NgModelController#$viewValue $viewValue}
- *    does not match a RegExp found by evaluating the Angular expression given in the attribute value.
+ *    does not match a RegExp found by evaluating the AngularJS expression given in the attribute value.
  *    If the expression evaluates to a RegExp object, then this is used directly.
  *    If the expression evaluates to a string, then it will be converted to a RegExp
  *    after wrapping it in `^` and `$` characters. For instance, `"abc"` will be converted to
@@ -1891,15 +2019,15 @@ function checkboxInputType(scope, element, attr, ctrl, $sniffer, $browser, $filt
  *    **Note:** Avoid using the `g` flag on the RegExp, as it will cause each successive search to
  *    start at the index of the last search's match, thus not taking the whole input value into
  *    account.
- * @param {string=} ngChange Angular expression to be executed when input changes due to user
+ * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
  *    interaction with the input element.
- * @param {boolean=} [ngTrim=true] If set to false Angular will not automatically trim the input.
+ * @param {boolean=} [ngTrim=true] If set to false AngularJS will not automatically trim the input.
  *
  * @knownIssue
  *
  * When specifying the `placeholder` attribute of `<textarea>`, Internet Explorer will temporarily
  * insert the placeholder value as the textarea's content. If the placeholder value contains
- * interpolation (`{{ ... }}`), an error will be logged in the console when Angular tries to update
+ * interpolation (`{{ ... }}`), an error will be logged in the console when AngularJS tries to update
  * the value of the by-then-removed text node. This doesn't affect the functionality of the
  * textarea, but can be undesirable.
  *
@@ -1926,7 +2054,7 @@ function checkboxInputType(scope, element, attr, ctrl, $sniffer, $browser, $filt
  * Specifically, data binding and event handling via `ng-model` is unsupported for `input[file]`.
  * </div>
  *
- * @param {string} ngModel Assignable angular expression to data-bind to.
+ * @param {string} ngModel Assignable AngularJS expression to data-bind to.
  * @param {string=} name Property name of the form under which the control is published.
  * @param {string=} required Sets `required` validation error key if the value is not entered.
  * @param {boolean=} ngRequired Sets `required` attribute if set to true
@@ -1936,7 +2064,7 @@ function checkboxInputType(scope, element, attr, ctrl, $sniffer, $browser, $filt
  *    maxlength. Setting the attribute to a negative or non-numeric value, allows view values of any
  *    length.
  * @param {string=} ngPattern Sets `pattern` validation error key if the ngModel {@link ngModel.NgModelController#$viewValue $viewValue}
- *    value does not match a RegExp found by evaluating the Angular expression given in the attribute value.
+ *    value does not match a RegExp found by evaluating the AngularJS expression given in the attribute value.
  *    If the expression evaluates to a RegExp object, then this is used directly.
  *    If the expression evaluates to a string, then it will be converted to a RegExp
  *    after wrapping it in `^` and `$` characters. For instance, `"abc"` will be converted to
@@ -1944,9 +2072,9 @@ function checkboxInputType(scope, element, attr, ctrl, $sniffer, $browser, $filt
  *    **Note:** Avoid using the `g` flag on the RegExp, as it will cause each successive search to
  *    start at the index of the last search's match, thus not taking the whole input value into
  *    account.
- * @param {string=} ngChange Angular expression to be executed when input changes due to user
+ * @param {string=} ngChange AngularJS expression to be executed when input changes due to user
  *    interaction with the input element.
- * @param {boolean=} [ngTrim=true] If set to false Angular will not automatically trim the input.
+ * @param {boolean=} [ngTrim=true] If set to false AngularJS will not automatically trim the input.
  *    This parameter is ignored for input[type=password] controls, which will never trim the
  *    input.
  *
@@ -2070,6 +2198,8 @@ var CONSTANT_VALUE_REGEXP = /^(true|false|\d+)$/;
 /**
  * @ngdoc directive
  * @name ngValue
+ * @restrict A
+ * @priority 100
  *
  * @description
  * Binds the given expression to the value of the element.
@@ -2082,8 +2212,8 @@ var CONSTANT_VALUE_REGEXP = /^(true|false|\d+)$/;
  * It can also be used to achieve one-way binding of a given expression to an input element
  * such as an `input[text]` or a `textarea`, when that element does not use ngModel.
  *
- * @element input
- * @param {string=} ngValue angular expression, whose value will be bound to the `value` attribute
+ * @element ANY
+ * @param {string=} ngValue AngularJS expression, whose value will be bound to the `value` attribute
  * and `value` property of the element.
  *
  * @example
@@ -2130,7 +2260,10 @@ var ngValueDirective = function() {
    *  makes it possible to use ngValue as a sort of one-way bind.
    */
   function updateElementValue(element, attr, value) {
-    element.prop('value', value);
+    // Support: IE9 only
+    // In IE9 values are converted to string (e.g. `input.value = null` results in `input.value === 'null'`).
+    var propValue = isDefined(value) ? value : (msie === 9) ? '' : null;
+    element.prop('value', propValue);
     attr.$set('value', value);
   }
 

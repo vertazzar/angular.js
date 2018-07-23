@@ -15,7 +15,7 @@
  * $q can be used in two fashions --- one which is more similar to Kris Kowal's Q or jQuery's Deferred
  * implementations, and the other which resembles ES6 (ES2015) promises to some degree.
  *
- * # $q constructor
+ * ## $q constructor
  *
  * The streamlined ES6 style promise is essentially just using $q as a constructor which takes a `resolver`
  * function as the first argument. This is similar to the native Promise implementation from ES6,
@@ -103,7 +103,7 @@
  * For more on this please see the [Q documentation](https://github.com/kriskowal/q) especially the
  * section on serial or parallel joining of promises.
  *
- * # The Deferred API
+ * ## The Deferred API
  *
  * A new instance of deferred is constructed by calling `$q.defer()`.
  *
@@ -125,7 +125,7 @@
  * - promise – `{Promise}` – promise object associated with this deferred.
  *
  *
- * # The Promise API
+ * ## The Promise API
  *
  * A new promise instance is created when a deferred instance is created and can be retrieved by
  * calling `deferred.promise`.
@@ -157,7 +157,7 @@
  *   specification](https://github.com/kriskowal/q/wiki/API-Reference#promisefinallycallback) for
  *   more information.
  *
- * # Chaining promises
+ * ## Chaining promises
  *
  * Because calling the `then` method of a promise returns a new derived promise, it is easily
  * possible to create a chain of promises:
@@ -177,17 +177,17 @@
  * $http's response interceptors.
  *
  *
- * # Differences between Kris Kowal's Q and $q
+ * ## Differences between Kris Kowal's Q and $q
  *
  *  There are two main differences:
  *
  * - $q is integrated with the {@link ng.$rootScope.Scope} Scope model observation
- *   mechanism in angular, which means faster propagation of resolution or rejection into your
+ *   mechanism in AngularJS, which means faster propagation of resolution or rejection into your
  *   models and avoiding unnecessary browser repaints, which would result in flickering UI.
  * - Q has many more features than $q, but that comes at a cost of bytes. $q is tiny, but contains
  *   all the important functionality needed for common async tasks.
  *
- * # Testing
+ * ## Testing
  *
  *  ```js
  *    it('should simulate promise', inject(function($q, $rootScope) {
@@ -280,7 +280,7 @@ function $$QProvider() {
  * @param {function(function)} nextTick Function for executing functions in the next turn.
  * @param {function(...*)} exceptionHandler Function into which unexpected exceptions are passed for
  *     debugging purposes.
- @ param {=boolean} errorOnUnhandledRejections Whether an error should be generated on unhandled
+ * @param {boolean=} errorOnUnhandledRejections Whether an error should be generated on unhandled
  *     promises rejections.
  * @returns {object} Promise manager.
  */
@@ -351,7 +351,7 @@ function qFactory(nextTick, exceptionHandler, errorOnUnhandledRejections) {
     state.pending = undefined;
     try {
       for (var i = 0, ii = pending.length; i < ii; ++i) {
-        state.pur = true;
+        markQStateExceptionHandled(state);
         promise = pending[i][0];
         fn = pending[i][state.status];
         try {
@@ -364,6 +364,10 @@ function qFactory(nextTick, exceptionHandler, errorOnUnhandledRejections) {
           }
         } catch (e) {
           rejectPromise(promise, e);
+          // This error is explicitly marked for being passed to the $exceptionHandler
+          if (e && e.$$passToExceptionHandler === true) {
+            exceptionHandler(e);
+          }
         }
       }
     } finally {
@@ -378,15 +382,20 @@ function qFactory(nextTick, exceptionHandler, errorOnUnhandledRejections) {
     // eslint-disable-next-line no-unmodified-loop-condition
     while (!queueSize && checkQueue.length) {
       var toCheck = checkQueue.shift();
-      if (!toCheck.pur) {
-        toCheck.pur = true;
-        exceptionHandler(toCheck.value);
+      if (!isStateExceptionHandled(toCheck)) {
+        markQStateExceptionHandled(toCheck);
+        var errorMessage = 'Possibly unhandled rejection: ' + toDebugString(toCheck.value);
+        if (isError(toCheck.value)) {
+          exceptionHandler(toCheck.value, errorMessage);
+        } else {
+          exceptionHandler(errorMessage);
+        }
       }
     }
   }
 
   function scheduleProcessQueue(state) {
-    if (errorOnUnhandledRejections && !state.pending && state.status === 2 && !state.pur) {
+    if (errorOnUnhandledRejections && !state.pending && state.status === 2 && !isStateExceptionHandled(state)) {
       if (queueSize === 0 && checkQueue.length === 0) {
         nextTick(processChecks);
       }
@@ -665,4 +674,14 @@ function qFactory(nextTick, exceptionHandler, errorOnUnhandledRejections) {
   $Q.race = race;
 
   return $Q;
+}
+
+function isStateExceptionHandled(state) {
+  return !!state.pur;
+}
+function markQStateExceptionHandled(state) {
+  state.pur = true;
+}
+function markQExceptionHandled(q) {
+  markQStateExceptionHandled(q.$$state);
 }

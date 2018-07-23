@@ -47,6 +47,14 @@ module.exports = function generateVersionDocProcessor(gitData) {
 
         var latestMap = {};
 
+        // When the docs are built on a tagged commit, yarn info won't include the latest release,
+        // so we add it manually based on the local version.json file.
+        var missesCurrentVersion = !currentVersion.isSnapshot && !versions.find(function(version) {
+          return version === currentVersion.version;
+        });
+
+        if (missesCurrentVersion) versions.push(currentVersion.version);
+
         versions = versions
             .filter(function(versionStr) {
               return blacklist.indexOf(versionStr) === -1;
@@ -70,10 +78,28 @@ module.exports = function generateVersionDocProcessor(gitData) {
             })
             .reverse();
 
+        // List the latest version for each branch
         var latest = sortObject(latestMap, reverse(semver.compare))
             .map(function(version) { return makeOption(version, 'Latest'); });
 
-        return [makeOption({version: 'snapshot'}, 'Latest', 'master')]
+        // Get the stable release with the highest version
+        var highestStableRelease = versions.find(semverIsStable);
+
+        // Generate master and stable snapshots
+        var snapshots = [
+          makeOption(
+            {version: 'snapshot'},
+            'Latest',
+            'master-snapshot'
+          ),
+          makeOption(
+            {version: 'snapshot-stable'},
+            'Latest',
+            createSnapshotStableLabel(highestStableRelease)
+          )
+        ];
+
+        return snapshots
             .concat(latest)
             .concat(versions);
       }
@@ -102,6 +128,19 @@ module.exports = function generateVersionDocProcessor(gitData) {
 
       function sortObject(obj, cmp) {
         return Object.keys(obj).map(function(key) { return obj[key]; }).sort(cmp);
+      }
+
+      // Adapted from
+      // https://github.com/kaelzhang/node-semver-stable/blob/34dd29842409295d49889d45871bec55a992b7f6/index.js#L25
+      function semverIsStable(version) {
+        var semverObj = version.version;
+        return semverObj === null ? false : !semverObj.prerelease.length;
+      }
+
+      function createSnapshotStableLabel(version) {
+        var label = version.label.replace(/.$/, 'x') + '-snapshot';
+
+        return label;
       }
     }
   };

@@ -68,11 +68,14 @@ function currencyFilter($locale) {
       fractionSize = formats.PATTERNS[1].maxFrac;
     }
 
+    // If the currency symbol is empty, trim whitespace around the symbol
+    var currencySymbolRe = !currencySymbol ? /\s*\u00A4\s*/g : /\u00A4/g;
+
     // if null or undefined pass it through
     return (amount == null)
         ? amount
         : formatNumber(amount, formats.PATTERNS[1], formats.GROUP_SEP, formats.DECIMAL_SEP, fractionSize).
-            replace(/\u00A4/g, currencySymbol);
+            replace(currencySymbolRe, currencySymbol);
   };
 }
 
@@ -475,7 +478,7 @@ var DATE_FORMATS = {
      GGGG: longEraGetter
 };
 
-var DATE_FORMATS_SPLIT = /((?:[^yMLdHhmsaZEwG']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|L+|d+|H+|h+|m+|s+|a|Z|G+|w+))(.*)/,
+var DATE_FORMATS_SPLIT = /((?:[^yMLdHhmsaZEwG']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+|L+|d+|H+|h+|m+|s+|a|Z|G+|w+))([\s\S]*)/,
     NUMBER_STRING = /^-?\d+$/;
 
 /**
@@ -533,6 +536,8 @@ var DATE_FORMATS_SPLIT = /((?:[^yMLdHhmsaZEwG']+)|(?:'(?:[^']|'')*')|(?:E+|y+|M+
  *   `format` string can contain literal values. These need to be escaped by surrounding with single quotes (e.g.
  *   `"h 'in the morning'"`). In order to output a single quote, escape it - i.e., two single quotes in a sequence
  *   (e.g. `"h 'o''clock'"`).
+ *
+ *   Any other characters in the `format` string will be output as-is.
  *
  * @param {(Date|number|string)} date Date to format either as Date object, milliseconds (string or
  *    number) or various ISO 8601 datetime string formats (e.g. yyyy-MM-ddTHH:mm:ss.sssZ and its
@@ -696,6 +701,9 @@ function jsonFilter() {
  * @kind function
  * @description
  * Converts string to lowercase.
+ *
+ * See the {@link ng.uppercase uppercase filter documentation} for a functionally identical example.
+ *
  * @see angular.lowercase
  */
 var lowercaseFilter = valueFn(lowercase);
@@ -707,6 +715,22 @@ var lowercaseFilter = valueFn(lowercase);
  * @kind function
  * @description
  * Converts string to uppercase.
- * @see angular.uppercase
+ * @example
+   <example module="uppercaseFilterExample" name="filter-uppercase">
+     <file name="index.html">
+       <script>
+         angular.module('uppercaseFilterExample', [])
+           .controller('ExampleController', ['$scope', function($scope) {
+             $scope.title = 'This is a title';
+           }]);
+       </script>
+       <div ng-controller="ExampleController">
+         <!-- This title should be formatted normally -->
+         <h1>{{title}}</h1>
+         <!-- This title should be capitalized -->
+         <h1>{{title | uppercase}}</h1>
+       </div>
+     </file>
+   </example>
  */
 var uppercaseFilter = valueFn(uppercase);

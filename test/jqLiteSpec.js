@@ -420,6 +420,93 @@ describe('jqLite', function() {
       selected.removeData('prop2');
     });
 
+    it('should not remove event handlers on removeData()', function() {
+      var log = '';
+      var elm = jqLite(a);
+      elm.on('click', function() {
+        log += 'click;';
+      });
+
+      elm.removeData();
+      browserTrigger(a, 'click');
+      expect(log).toBe('click;');
+    });
+
+    it('should allow to set data after removeData() with event handlers present', function() {
+      var elm = jqLite(a);
+      elm.on('click', function() {});
+      elm.data('key1', 'value1');
+      elm.removeData();
+      elm.data('key2', 'value2');
+      expect(elm.data('key1')).not.toBeDefined();
+      expect(elm.data('key2')).toBe('value2');
+    });
+
+    it('should allow to set data after removeData() without event handlers present', function() {
+      var elm = jqLite(a);
+      elm.data('key1', 'value1');
+      elm.removeData();
+      elm.data('key2', 'value2');
+      expect(elm.data('key1')).not.toBeDefined();
+      expect(elm.data('key2')).toBe('value2');
+    });
+
+
+    it('should remove user data on cleanData()', function() {
+      var selected = jqLite([a, b, c]);
+
+      selected.data('prop', 'value');
+      jqLite(b).data('prop', 'new value');
+
+      jqLite.cleanData(selected);
+
+      expect(jqLite(a).data('prop')).toBeUndefined();
+      expect(jqLite(b).data('prop')).toBeUndefined();
+      expect(jqLite(c).data('prop')).toBeUndefined();
+    });
+
+    it('should remove event handlers on cleanData()', function() {
+      var selected = jqLite([a, b, c]);
+
+      var log = '';
+      var elm = jqLite(b);
+      elm.on('click', function() {
+        log += 'click;';
+      });
+      jqLite.cleanData(selected);
+
+      browserTrigger(b, 'click');
+      expect(log).toBe('');
+    });
+
+    it('should remove user data & event handlers on cleanData()', function() {
+      var selected = jqLite([a, b, c]);
+
+      var log = '';
+      var elm = jqLite(b);
+      elm.on('click', function() {
+        log += 'click;';
+      });
+
+      selected.data('prop', 'value');
+      jqLite(a).data('prop', 'new value');
+
+      jqLite.cleanData(selected);
+
+      browserTrigger(b, 'click');
+      expect(log).toBe('');
+
+      expect(jqLite(a).data('prop')).toBeUndefined();
+      expect(jqLite(b).data('prop')).toBeUndefined();
+      expect(jqLite(c).data('prop')).toBeUndefined();
+    });
+
+    it('should not break on cleanData(), if element has no data', function() {
+      var selected = jqLite([a, b, c]);
+      spyOn(jqLite, '_data').and.returnValue(undefined);
+      expect(function() { jqLite.cleanData(selected); }).not.toThrow();
+    });
+
 
     it('should add and remove data on SVGs', function() {
       var svg = jqLite('<svg><rect></rect></svg>');
@@ -564,7 +651,7 @@ describe('jqLite', function() {
         var div = jqLite('<div><span>text</span></div>'),
             span = div.find('span');
 
-        span.data('name', 'angular');
+        span.data('name', 'AngularJS');
         span.remove();
         expect(span.data('name')).toBeUndefined();
       });
@@ -914,6 +1001,37 @@ describe('jqLite', function() {
       });
 
 
+      // JQLite specific implementation/performance tests
+      if (_jqLiteMode) {
+        it('should only get/set the attribute once when multiple classes added', function() {
+          var fakeElement = {
+            nodeType: 1,
+            setAttribute: jasmine.createSpy(),
+            getAttribute: jasmine.createSpy().and.returnValue('')
+          };
+          var jqA = jqLite(fakeElement);
+
+          jqA.addClass('foo bar baz');
+          expect(fakeElement.getAttribute).toHaveBeenCalledOnceWith('class');
+          expect(fakeElement.setAttribute).toHaveBeenCalledOnceWith('class', 'foo bar baz');
+        });
+
+
+        it('should not set the attribute when classes not changed', function() {
+          var fakeElement = {
+            nodeType: 1,
+            setAttribute: jasmine.createSpy(),
+            getAttribute: jasmine.createSpy().and.returnValue('foo bar')
+          };
+          var jqA = jqLite(fakeElement);
+
+          jqA.addClass('foo');
+          expect(fakeElement.getAttribute).toHaveBeenCalledOnceWith('class');
+          expect(fakeElement.setAttribute).not.toHaveBeenCalled();
+        });
+      }
+
+
       it('should not add duplicate classes', function() {
         var jqA = jqLite(a);
         expect(a.className).toBe('');
@@ -1031,6 +1149,37 @@ describe('jqLite', function() {
         jqA.removeClass('foo baz noexistent');
         expect(a.className).toBe('bar');
       });
+
+
+      // JQLite specific implementation/performance tests
+      if (_jqLiteMode) {
+        it('should get/set the attribute once when removing multiple classes', function() {
+          var fakeElement = {
+            nodeType: 1,
+            setAttribute: jasmine.createSpy(),
+            getAttribute: jasmine.createSpy().and.returnValue('foo bar baz')
+          };
+          var jqA = jqLite(fakeElement);
+
+          jqA.removeClass('foo baz noexistent');
+          expect(fakeElement.getAttribute).toHaveBeenCalledOnceWith('class');
+          expect(fakeElement.setAttribute).toHaveBeenCalledOnceWith('class', 'bar');
+        });
+
+
+        it('should not set the attribute when classes not changed', function() {
+          var fakeElement = {
+            nodeType: 1,
+            setAttribute: jasmine.createSpy(),
+            getAttribute: jasmine.createSpy().and.returnValue('foo bar')
+          };
+          var jqA = jqLite(fakeElement);
+
+          jqA.removeClass('noexistent');
+          expect(fakeElement.getAttribute).toHaveBeenCalledOnceWith('class');
+          expect(fakeElement.setAttribute).not.toHaveBeenCalled();
+        });
+      }
     });
   });
 
@@ -1368,7 +1517,7 @@ describe('jqLite', function() {
       expect(callback).toHaveBeenCalledTimes(1);
     });
 
-    it('should set event.target on IE', function() {
+    it('should set event.target', function() {
       var elm = jqLite(a);
       elm.on('click', function(event) {
         expect(event.target).toBe(a);
@@ -1761,26 +1910,26 @@ describe('jqLite', function() {
 
     it('should deregister specific listener for multiple types separated by spaces', function() {
       var aElem = jqLite(a),
-          masterSpy = jasmine.createSpy('master'),
+          leaderSpy = jasmine.createSpy('leader'),
           extraSpy = jasmine.createSpy('extra');
 
-      aElem.on('click', masterSpy);
+      aElem.on('click', leaderSpy);
       aElem.on('click', extraSpy);
-      aElem.on('mouseover', masterSpy);
+      aElem.on('mouseover', leaderSpy);
 
       browserTrigger(a, 'click');
       browserTrigger(a, 'mouseover');
-      expect(masterSpy).toHaveBeenCalledTimes(2);
+      expect(leaderSpy).toHaveBeenCalledTimes(2);
       expect(extraSpy).toHaveBeenCalledOnce();
 
-      masterSpy.calls.reset();
+      leaderSpy.calls.reset();
       extraSpy.calls.reset();
 
-      aElem.off('click mouseover', masterSpy);
+      aElem.off('click mouseover', leaderSpy);
 
       browserTrigger(a, 'click');
       browserTrigger(a, 'mouseover');
-      expect(masterSpy).not.toHaveBeenCalled();
+      expect(leaderSpy).not.toHaveBeenCalled();
       expect(extraSpy).toHaveBeenCalledOnce();
     });
 
@@ -2295,7 +2444,7 @@ describe('jqLite', function() {
     });
 
     it('should pass in a dummy event', function() {
-      // we need the event to have at least preventDefault because angular will call it on
+      // we need the event to have at least preventDefault because AngularJS will call it on
       // all anchors with no href automatically
 
       var element = jqLite('<a>poke</a>'),

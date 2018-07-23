@@ -335,9 +335,25 @@ describe('$interval', function() {
     }));
 
 
-    it('should not throw a runtime exception when given an undefined promise',
-        inject(function($interval) {
+    it('should not throw an error when given an undefined promise', inject(function($interval) {
       expect($interval.cancel()).toBe(false);
+    }));
+
+
+    it('should throw an error when given a non-$interval promise', inject(function($interval) {
+      var promise = $interval(noop).then(noop);
+      expect(function() { $interval.cancel(promise); }).toThrowMinErr('$interval', 'badprom');
+    }));
+
+
+    it('should not trigger digest when cancelled', inject(function($interval, $rootScope, $browser) {
+      var watchSpy = jasmine.createSpy('watchSpy');
+      $rootScope.$watch(watchSpy);
+
+      var t = $interval();
+      $interval.cancel(t);
+      expect(function() {$browser.defer.flush();}).toThrowError('No deferred tasks to be flushed');
+      expect(watchSpy).not.toHaveBeenCalled();
     }));
   });
 

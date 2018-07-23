@@ -9,6 +9,9 @@
  * Selects a subset of items from `array` and returns it as a new array.
  *
  * @param {Array} array The source array.
+ * <div class="alert alert-info">
+ *   **Note**: If the array contains objects that reference themselves, filtering is not possible.
+ * </div>
  * @param {string|Object|function()} expression The predicate to be used for selecting items from
  *   `array`.
  *
@@ -42,8 +45,9 @@
  *     The final result is an array of those elements that the predicate returned true for.
  *
  * @param {function(actual, expected)|true|false} [comparator] Comparator which is used in
- *     determining if the expected value (from the filter expression) and actual value (from
- *     the object in the array) should be considered a match.
+ *     determining if values retrieved using `expression` (when it is not a function) should be
+ *     considered a match based on the expected value (from the filter expression) and actual
+ *     value (from the object in the array).
  *
  *   Can be one of:
  *
@@ -226,7 +230,10 @@ function deepCompare(actual, expected, comparator, anyPropertyKey, matchAgainstA
       var key;
       if (matchAgainstAnyProp) {
         for (key in actual) {
-          if ((key.charAt(0) !== '$') && deepCompare(actual[key], expected, comparator, anyPropertyKey, true)) {
+          // Under certain, rare, circumstances, key may not be a string and `charAt` will be undefined
+          // See: https://github.com/angular/angular.js/issues/15644
+          if (key.charAt && (key.charAt(0) !== '$') &&
+              deepCompare(actual[key], expected, comparator, anyPropertyKey, true)) {
             return true;
           }
         }

@@ -10,6 +10,9 @@
   splice,
   push,
   toString,
+  minErrConfig,
+  errorHandlingConfig,
+  isValidObjectMaxDepth,
   ngMinErr,
   angularModule,
   uid,
@@ -18,8 +21,6 @@
 
   lowercase,
   uppercase,
-  manualLowercase,
-  manualUppercase,
   nodeName_,
   isArrayLike,
   forEach,
@@ -42,6 +43,7 @@
   isNumber,
   isNumberNaN,
   isDate,
+  isError,
   isArray,
   isFunction,
   isRegExp,
@@ -59,6 +61,7 @@
   includes,
   arrayRemove,
   copy,
+  simpleCompare,
   equals,
   csp,
   jq,
@@ -70,6 +73,7 @@
   fromJson,
   convertTimezoneToLocal,
   timezoneToOffset,
+  addDateMinutes,
   startingTag,
   tryDecodeURIComponent,
   parseKeyValue,
@@ -107,13 +111,11 @@
  * @installation
  * @description
  *
- * # ng (core module)
  * The ng module is loaded by default when an AngularJS application is started. The module itself
  * contains the essential components for an AngularJS application to function. The table below
  * lists a high level breakdown of each of the services/factories, filters, directives and testing
  * components available within this core module.
  *
- * <div doc-module-components="ng"></div>
  */
 
 var REGEX_STRING_REGEXP = /^\/(.+)\/([a-z]*)$/;
@@ -126,15 +128,7 @@ var VALIDITY_STATE_PROPERTY = 'validity';
 var hasOwnProperty = Object.prototype.hasOwnProperty;
 
 /**
- * @ngdoc function
- * @name angular.lowercase
- * @module ng
- * @kind function
- *
- * @deprecated
- * sinceVersion="1.5.0"
- * removeVersion="1.7.0"
- * Use [String.prototype.toLowerCase](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase) instead.
+ * @private
  *
  * @description Converts the specified string to lowercase.
  * @param {string} string String to be converted to lowercase.
@@ -143,46 +137,13 @@ var hasOwnProperty = Object.prototype.hasOwnProperty;
 var lowercase = function(string) {return isString(string) ? string.toLowerCase() : string;};
 
 /**
- * @ngdoc function
- * @name angular.uppercase
- * @module ng
- * @kind function
- *
- * @deprecated
- * sinceVersion="1.5.0"
- * removeVersion="1.7.0"
- * Use [String.prototype.toUpperCase](https://developer.mozilla.org/docs/Web/JavaScript/Reference/Global_Objects/String/toUpperCase) instead.
+ * @private
  *
  * @description Converts the specified string to uppercase.
  * @param {string} string String to be converted to uppercase.
  * @returns {string} Uppercased string.
  */
 var uppercase = function(string) {return isString(string) ? string.toUpperCase() : string;};
-
-
-var manualLowercase = function(s) {
-  /* eslint-disable no-bitwise */
-  return isString(s)
-      ? s.replace(/[A-Z]/g, function(ch) {return String.fromCharCode(ch.charCodeAt(0) | 32);})
-      : s;
-  /* eslint-enable */
-};
-var manualUppercase = function(s) {
-  /* eslint-disable no-bitwise */
-  return isString(s)
-      ? s.replace(/[a-z]/g, function(ch) {return String.fromCharCode(ch.charCodeAt(0) & ~32);})
-      : s;
-  /* eslint-enable */
-};
-
-
-// String#toLowerCase and String#toUpperCase don't produce correct results in browsers with Turkish
-// locale, for this reason we need to detect this case and redefine lowercase/uppercase methods
-// with correct but slower alternatives. See https://github.com/angular/angular.js/issues/11387
-if ('i' !== 'I'.toLowerCase()) {
-  lowercase = manualLowercase;
-  uppercase = manualUppercase;
-}
 
 
 var
@@ -232,8 +193,7 @@ function isArrayLike(obj) {
 
   // NodeList objects (with `item` method) and
   // other objects with suitable length characteristics are array-like
-  return isNumber(length) &&
-    (length >= 0 && ((length - 1) in obj || obj instanceof Array) || typeof obj.item === 'function');
+  return isNumber(length) && (length >= 0 && (length - 1) in obj || typeof obj.item === 'function');
 
 }
 
@@ -431,6 +391,20 @@ function extend(dst) {
 *
 * Unlike {@link angular.extend extend()}, `merge()` recursively descends into object properties of source
 * objects, performing a deep copy.
+*
+* @deprecated
+* sinceVersion="1.6.5"
+* This function is deprecated, but will not be removed in the 1.x lifecycle.
+* There are edge cases (see {@link angular.merge#known-issues known issues}) that are not
+* supported by this function. We suggest
+* using [lodash's merge()](https://lodash.com/docs/4.17.4#merge) instead.
+*
+* @knownIssue
+* This is a list of (known) object types that are not handled correctly by this function:
+* - [`Blob`](https://developer.mozilla.org/docs/Web/API/Blob)
+* - [`MediaStream`](https://developer.mozilla.org/docs/Web/API/MediaStream)
+* - [`CanvasGradient`](https://developer.mozilla.org/docs/Web/API/CanvasGradient)
+* - AngularJS {@link $rootScope.Scope scopes};
 *
 * @param {Object} dst Destination object.
 * @param {...Object} src Source object(s).
@@ -634,12 +608,32 @@ function isDate(value) {
  * @kind function
  *
  * @description
- * Determines if a reference is an `Array`. Alias of Array.isArray.
+ * Determines if a reference is an `Array`.
  *
  * @param {*} value Reference to check.
  * @returns {boolean} True if `value` is an `Array`.
  */
-var isArray = Array.isArray;
+function isArray(arr) {
+  return Array.isArray(arr) || arr instanceof Array;
+}
+
+/**
+ * @description
+ * Determines if a reference is an `Error`.
+ * Loosely based on https://www.npmjs.com/package/iserror
+ *
+ * @param {*} value Reference to check.
+ * @returns {boolean} True if `value` is an `Error`.
+ */
+function isError(value) {
+  var tag = toString.call(value);
+  switch (tag) {
+    case '[object Error]': return true;
+    case '[object Exception]': return true;
+    case '[object DOMException]': return true;
+    default: return value instanceof Error;
+  }
+}
 
 /**
  * @ngdoc function
@@ -822,7 +816,7 @@ function arrayRemove(array, value) {
           <button ng-click="update(user)">SAVE</button>
         </form>
         <pre>form = {{user | json}}</pre>
-        <pre>master = {{master | json}}</pre>
+        <pre>leader = {{leader | json}}</pre>
       </div>
     </file>
     <file name="script.js">
@@ -830,16 +824,16 @@ function arrayRemove(array, value) {
       angular.
         module('copyExample', []).
         controller('ExampleController', ['$scope', function($scope) {
-          $scope.master = {};
+          $scope.leader = {};
 
           $scope.reset = function() {
             // Example with 1 argument
-            $scope.user = angular.copy($scope.master);
+            $scope.user = angular.copy($scope.leader);
           };
 
           $scope.update = function(user) {
             // Example with 2 arguments
-            angular.copy(user, $scope.master);
+            angular.copy(user, $scope.leader);
           };
 
           $scope.reset();
@@ -847,9 +841,10 @@ function arrayRemove(array, value) {
     </file>
   </example>
  */
-function copy(source, destination) {
+function copy(source, destination, maxDepth) {
   var stackSource = [];
   var stackDest = [];
+  maxDepth = isValidObjectMaxDepth(maxDepth) ? maxDepth : NaN;
 
   if (destination) {
     if (isTypedArray(destination) || isArrayBuffer(destination)) {
@@ -872,35 +867,39 @@ function copy(source, destination) {
 
     stackSource.push(source);
     stackDest.push(destination);
-    return copyRecurse(source, destination);
+    return copyRecurse(source, destination, maxDepth);
   }
 
-  return copyElement(source);
+  return copyElement(source, maxDepth);
 
-  function copyRecurse(source, destination) {
+  function copyRecurse(source, destination, maxDepth) {
+    maxDepth--;
+    if (maxDepth < 0) {
+      return '...';
+    }
     var h = destination.$$hashKey;
     var key;
     if (isArray(source)) {
       for (var i = 0, ii = source.length; i < ii; i++) {
-        destination.push(copyElement(source[i]));
+        destination.push(copyElement(source[i], maxDepth));
       }
     } else if (isBlankObject(source)) {
       // createMap() fast path --- Safe to avoid hasOwnProperty check because prototype chain is empty
       for (key in source) {
-        destination[key] = copyElement(source[key]);
+        destination[key] = copyElement(source[key], maxDepth);
       }
     } else if (source && typeof source.hasOwnProperty === 'function') {
       // Slow path, which must rely on hasOwnProperty
       for (key in source) {
         if (source.hasOwnProperty(key)) {
-          destination[key] = copyElement(source[key]);
+          destination[key] = copyElement(source[key], maxDepth);
         }
       }
     } else {
       // Slowest path --- hasOwnProperty can't be called as a method
       for (key in source) {
         if (hasOwnProperty.call(source, key)) {
-          destination[key] = copyElement(source[key]);
+          destination[key] = copyElement(source[key], maxDepth);
         }
       }
     }
@@ -908,7 +907,7 @@ function copy(source, destination) {
     return destination;
   }
 
-  function copyElement(source) {
+  function copyElement(source, maxDepth) {
     // Simple values
     if (!isObject(source)) {
       return source;
@@ -937,7 +936,7 @@ function copy(source, destination) {
     stackDest.push(destination);
 
     return needsRecurse
-      ? copyRecurse(source, destination)
+      ? copyRecurse(source, destination, maxDepth)
       : destination;
   }
 
@@ -986,6 +985,10 @@ function copy(source, destination) {
     }
   }
 }
+
+
+// eslint-disable-next-line no-self-compare
+function simpleCompare(a, b) { return a === b || (a !== a && b !== b); }
 
 
 /**
@@ -1068,7 +1071,7 @@ function equals(o1, o2) {
       }
     } else if (isDate(o1)) {
       if (!isDate(o2)) return false;
-      return equals(o1.getTime(), o2.getTime());
+      return simpleCompare(o1.getTime(), o2.getTime());
     } else if (isRegExp(o1)) {
       if (!isRegExp(o2)) return false;
       return o1.toString() === o2.toString();
@@ -1141,7 +1144,7 @@ var csp = function() {
  * used to force either jqLite by leaving ng-jq blank or setting the name of
  * the jquery variable under window (eg. jQuery).
  *
- * Since angular looks for this directive when it is loaded (doesn't wait for the
+ * Since AngularJS looks for this directive when it is loaded (doesn't wait for the
  * DOMContentLoaded event), it must be placed on an element that comes before the script
  * which loads angular. Also, only the first instance of `ng-jq` will be used and all
  * others ignored.
@@ -1254,7 +1257,7 @@ function toJsonReplacer(key, value) {
  *
  * @description
  * Serializes input into a JSON-formatted string. Properties with leading $$ characters will be
- * stripped since angular uses this notation internally.
+ * stripped since AngularJS uses this notation internally.
  *
  * @param {Object|Array|Date|string|number|boolean} obj Input to be serialized into JSON.
  * @param {boolean|number} [pretty=2] If set to true, the JSON output will contain newlines and whitespace.
@@ -1312,7 +1315,7 @@ function fromJson(json) {
 
 var ALL_COLONS = /:/g;
 function timezoneToOffset(timezone, fallback) {
-  // Support: IE 9-11 only, Edge 13-14+
+  // Support: IE 9-11 only, Edge 13-15+
   // IE/Edge do not "understand" colon (`:`) in timezone
   timezone = timezone.replace(ALL_COLONS, '');
   var requestedTimezoneOffset = Date.parse('Jan 01, 1970 00:00:00 ' + timezone) / 60000;
@@ -1339,13 +1342,8 @@ function convertTimezoneToLocal(date, timezone, reverse) {
  * @returns {string} Returns the string representation of the element.
  */
 function startingTag(element) {
-  element = jqLite(element).clone();
-  try {
-    // turns out IE does not let you set .html() on elements which
-    // are not allowed to have children. So we just ignore it.
-    element.empty();
-  } catch (e) { /* empty */ }
-  var elemHtml = jqLite('<div>').append(element).html();
+  element = jqLite(element).clone().empty();
+  var elemHtml = jqLite('<div></div>').append(element).html();
   try {
     return element[0].nodeType === NODE_TYPE_TEXT ? lowercase(elemHtml) :
         elemHtml.
@@ -1479,30 +1477,52 @@ function getNgAttribute(element, ngAttr) {
 }
 
 function allowAutoBootstrap(document) {
-  if (!document.currentScript) {
+  var script = document.currentScript;
+
+  if (!script) {
+    // Support: IE 9-11 only
+    // IE does not have `document.currentScript`
     return true;
   }
-  var src = document.currentScript.getAttribute('src');
-  var link = document.createElement('a');
-  link.href = src;
-  if (document.location.origin === link.origin) {
-    // Same-origin resources are always allowed, even for non-whitelisted schemes.
-    return true;
+
+  // If the `currentScript` property has been clobbered just return false, since this indicates a probable attack
+  if (!(script instanceof window.HTMLScriptElement || script instanceof window.SVGScriptElement)) {
+    return false;
   }
-  // Disabled bootstrapping unless angular.js was loaded from a known scheme used on the web.
-  // This is to prevent angular.js bundled with browser extensions from being used to bypass the
-  // content security policy in web pages and other browser extensions.
-  switch (link.protocol) {
-    case 'http:':
-    case 'https:':
-    case 'ftp:':
-    case 'blob:':
-    case 'file:':
-    case 'data:':
+
+  var attributes = script.attributes;
+  var srcs = [attributes.getNamedItem('src'), attributes.getNamedItem('href'), attributes.getNamedItem('xlink:href')];
+
+  return srcs.every(function(src) {
+    if (!src) {
       return true;
-    default:
+    }
+    if (!src.value) {
       return false;
-  }
+    }
+
+    var link = document.createElement('a');
+    link.href = src.value;
+
+    if (document.location.origin === link.origin) {
+      // Same-origin resources are always allowed, even for non-whitelisted schemes.
+      return true;
+    }
+    // Disabled bootstrapping unless angular.js was loaded from a known scheme used on the web.
+    // This is to prevent angular.js bundled with browser extensions from being used to bypass the
+    // content security policy in web pages and other browser extensions.
+    switch (link.protocol) {
+      case 'http:':
+      case 'https:':
+      case 'ftp:':
+      case 'blob:':
+      case 'file:':
+      case 'data:':
+        return true;
+      default:
+        return false;
+    }
+  });
 }
 
 // Cached as it has to run during loading so that document.currentScript is available.
@@ -1549,6 +1569,10 @@ var isAutoBootstrapAllowed = allowAutoBootstrap(window.document);
  * document would not be compiled, the `AppController` would not be instantiated and the `{{ a+b }}`
  * would not be resolved to `3`.
  *
+ * @example
+ *
+ * ### Simple Usage
+ *
  * `ngApp` is the easiest, and most common way to bootstrap an application.
  *
  <example module="ngAppDemo" name="ng-app">
@@ -1564,6 +1588,10 @@ var isAutoBootstrapAllowed = allowAutoBootstrap(window.document);
    });
    </file>
  </example>
+ *
+ * @example
+ *
+ * ### With `ngStrictDi`
  *
  * Using `ngStrictDi`, you would see something like this:
  *
@@ -1667,7 +1695,7 @@ function angularInit(element, bootstrap) {
   });
   if (appElement) {
     if (!isAutoBootstrapAllowed) {
-      window.console.error('Angular: disabling automatic bootstrap. <script> protocol indicates ' +
+      window.console.error('AngularJS: disabling automatic bootstrap. <script> protocol indicates ' +
           'an extension, document.location.href does not match.');
       return;
     }
@@ -1681,14 +1709,14 @@ function angularInit(element, bootstrap) {
  * @name angular.bootstrap
  * @module ng
  * @description
- * Use this function to manually start up angular application.
+ * Use this function to manually start up AngularJS application.
  *
  * For more information, see the {@link guide/bootstrap Bootstrap guide}.
  *
- * Angular will detect if it has been loaded into the browser more than once and only allow the
+ * AngularJS will detect if it has been loaded into the browser more than once and only allow the
  * first loaded script to be bootstrapped and will report a warning to the browser console for
  * each of the subsequent scripts. This prevents strange results in applications, where otherwise
- * multiple instances of Angular try to work on the DOM.
+ * multiple instances of AngularJS try to work on the DOM.
  *
  * <div class="alert alert-warning">
  * **Note:** Protractor based end-to-end tests cannot use this function to bootstrap manually.
@@ -1722,7 +1750,7 @@ function angularInit(element, bootstrap) {
  * </html>
  * ```
  *
- * @param {DOMElement} element DOM element which is the root of angular application.
+ * @param {DOMElement} element DOM element which is the root of AngularJS application.
  * @param {Array<String|Function|Array>=} modules an array of modules to load into the application.
  *     Each item in the array should be the name of a predefined module or a (DI annotated)
  *     function that will be invoked by the injector as a `config` block.
@@ -1822,9 +1850,9 @@ function reloadWithDebugInfo() {
  * @name angular.getTestability
  * @module ng
  * @description
- * Get the testability service for the instance of Angular on the given
+ * Get the testability service for the instance of AngularJS on the given
  * element.
- * @param {DOMElement} element DOM element which is the root of angular application.
+ * @param {DOMElement} element DOM element which is the root of AngularJS application.
  */
 function getTestability(rootElement) {
   var injector = angular.element(rootElement).injector();
@@ -1858,36 +1886,36 @@ function bindJQuery() {
                                  window[jqName];   // use jQuery specified by `ngJq`
 
   // Use jQuery if it exists with proper functionality, otherwise default to us.
-  // Angular 1.2+ requires jQuery 1.7+ for on()/off() support.
-  // Angular 1.3+ technically requires at least jQuery 2.1+ but it may work with older
+  // AngularJS 1.2+ requires jQuery 1.7+ for on()/off() support.
+  // AngularJS 1.3+ technically requires at least jQuery 2.1+ but it may work with older
   // versions. It will not work for sure with jQuery <1.7, though.
   if (jQuery && jQuery.fn.on) {
     jqLite = jQuery;
     extend(jQuery.fn, {
       scope: JQLitePrototype.scope,
       isolateScope: JQLitePrototype.isolateScope,
-      controller: JQLitePrototype.controller,
+      controller: /** @type {?} */ (JQLitePrototype).controller,
       injector: JQLitePrototype.injector,
       inheritedData: JQLitePrototype.inheritedData
     });
-
-    // All nodes removed from the DOM via various jQuery APIs like .remove()
-    // are passed through jQuery.cleanData. Monkey-patch this method to fire
-    // the $destroy event on all removed nodes.
-    originalCleanData = jQuery.cleanData;
-    jQuery.cleanData = function(elems) {
-      var events;
-      for (var i = 0, elem; (elem = elems[i]) != null; i++) {
-        events = jQuery._data(elem, 'events');
-        if (events && events.$destroy) {
-          jQuery(elem).triggerHandler('$destroy');
-        }
-      }
-      originalCleanData(elems);
-    };
   } else {
     jqLite = JQLite;
   }
+
+  // All nodes removed from the DOM via various jqLite/jQuery APIs like .remove()
+  // are passed through jqLite/jQuery.cleanData. Monkey-patch this method to fire
+  // the $destroy event on all removed nodes.
+  originalCleanData = jqLite.cleanData;
+  jqLite.cleanData = function(elems) {
+    var events;
+    for (var i = 0, elem; (elem = elems[i]) != null; i++) {
+      events = (jqLite._data(elem) || {}).events;
+      if (events && events.$destroy) {
+        jqLite(elem).triggerHandler('$destroy');
+      }
+    }
+    originalCleanData(elems);
+  };
 
   angular.element = jqLite;
 

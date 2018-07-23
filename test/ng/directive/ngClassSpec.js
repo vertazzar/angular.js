@@ -517,6 +517,36 @@ describe('ngClass', function() {
     })
   );
 
+  // https://github.com/angular/angular.js/issues/15905
+  it('should support a mixed literal-array/object variable', inject(function($rootScope, $compile) {
+      element = $compile('<div ng-class="[classVar]"></div>')($rootScope);
+
+      $rootScope.classVar = {orange: true};
+      $rootScope.$digest();
+      expect(element).toHaveClass('orange');
+
+      $rootScope.classVar.orange = false;
+      $rootScope.$digest();
+
+      expect(element).not.toHaveClass('orange');
+    })
+  );
+
+  it('should support a one-time mixed literal-array/object variable', inject(function($rootScope, $compile) {
+      element = $compile('<div ng-class="::[classVar1, classVar2]"></div>')($rootScope);
+
+      $rootScope.classVar1 = {orange: true};
+      $rootScope.$digest();
+      expect(element).toHaveClass('orange');
+
+      $rootScope.classVar1.orange = false;
+      $rootScope.$digest();
+
+      expect(element).not.toHaveClass('orange');
+    })
+  );
+
+
   it('should do value stabilization as expected when one-time binding',
     inject(function($rootScope, $compile) {
       element = $compile('<div ng-class="::className"></div>')($rootScope);
@@ -566,6 +596,26 @@ describe('ngClass', function() {
       expect(element).not.toHaveClass('orange');
     })
   );
+
+  //https://github.com/angular/angular.js/issues/15960#issuecomment-299109412
+  it('should always reevaluate filters with non-primitive inputs within literals', function() {
+    module(function($filterProvider) {
+      $filterProvider.register('foo', valueFn(function(o) {
+        return o.a || o.b;
+      }));
+    });
+
+    inject(function($rootScope, $compile) {
+      $rootScope.testObj = {};
+      element = $compile('<div ng-class="{x: (testObj | foo)}">')($rootScope);
+
+      $rootScope.$apply();
+      expect(element).not.toHaveClass('x');
+
+      $rootScope.$apply('testObj.a = true');
+      expect(element).toHaveClass('x');
+    });
+  });
 
   describe('large objects', function() {
     var getProp;

@@ -28,6 +28,7 @@
   ngInitDirective,
   ngNonBindableDirective,
   ngPluralizeDirective,
+  ngRefDirective,
   ngRepeatDirective,
   ngShowDirective,
   ngStyleDirective,
@@ -69,8 +70,8 @@
   $FilterProvider,
   $$ForceReflowProvider,
   $InterpolateProvider,
+  $$IntervalFactoryProvider,
   $IntervalProvider,
-  $$HashMapProvider,
   $HttpProvider,
   $HttpParamSerializerProvider,
   $HttpParamSerializerJQLikeProvider,
@@ -79,6 +80,7 @@
   $jsonpCallbacksProvider,
   $LocationProvider,
   $LogProvider,
+  $$MapProvider,
   $ParseProvider,
   $RootScopeProvider,
   $QProvider,
@@ -87,6 +89,7 @@
   $SceProvider,
   $SceDelegateProvider,
   $SnifferProvider,
+  $$TaskTrackerFactoryProvider,
   $TemplateCacheProvider,
   $TemplateRequestProvider,
   $$TestabilityProvider,
@@ -126,6 +129,7 @@ var version = {
 
 function publishExternalAPI(angular) {
   extend(angular, {
+    'errorHandlingConfig': errorHandlingConfig,
     'bootstrap': bootstrap,
     'copy': copy,
     'extend': extend,
@@ -149,8 +153,6 @@ function publishExternalAPI(angular) {
     'isArray': isArray,
     'version': version,
     'isDate': isDate,
-    'lowercase': lowercase,
-    'uppercase': uppercase,
     'callbacks': {$$counter: 0},
     'getTestability': getTestability,
     'reloadWithDebugInfo': reloadWithDebugInfo,
@@ -158,7 +160,9 @@ function publishExternalAPI(angular) {
     '$$csp': csp,
     '$$encodeUriSegment': encodeUriSegment,
     '$$encodeUriQuery': encodeUriQuery,
-    '$$stringify': stringify
+    '$$lowercase': lowercase,
+    '$$stringify': stringify,
+    '$$uppercase': uppercase
   });
 
   angularModule = setupModuleLoader(window);
@@ -193,6 +197,7 @@ function publishExternalAPI(angular) {
             ngInit: ngInitDirective,
             ngNonBindable: ngNonBindableDirective,
             ngPluralize: ngPluralizeDirective,
+            ngRef: ngRefDirective,
             ngRepeat: ngRepeatDirective,
             ngShow: ngShowDirective,
             ngStyle: ngStyleDirective,
@@ -238,6 +243,7 @@ function publishExternalAPI(angular) {
         $$forceReflow: $$ForceReflowProvider,
         $interpolate: $InterpolateProvider,
         $interval: $IntervalProvider,
+        $$intervalFactory: $$IntervalFactoryProvider,
         $http: $HttpProvider,
         $httpParamSerializer: $HttpParamSerializerProvider,
         $httpParamSerializerJQLike: $HttpParamSerializerJQLikeProvider,
@@ -253,6 +259,7 @@ function publishExternalAPI(angular) {
         $sce: $SceProvider,
         $sceDelegate: $SceDelegateProvider,
         $sniffer: $SnifferProvider,
+        $$taskTrackerFactory: $$TaskTrackerFactoryProvider,
         $templateCache: $TemplateCacheProvider,
         $templateRequest: $TemplateRequestProvider,
         $$testability: $$TestabilityProvider,
@@ -260,9 +267,10 @@ function publishExternalAPI(angular) {
         $window: $WindowProvider,
         $$rAF: $$RAFProvider,
         $$jqLite: $$jqLiteProvider,
-        $$HashMap: $$HashMapProvider,
+        $$Map: $$MapProvider,
         $$cookieReader: $$CookieReaderProvider
       });
     }
-  ]);
+  ])
+  .info({ angularVersion: '"NG_VERSION_FULL"' });
 }

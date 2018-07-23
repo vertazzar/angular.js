@@ -1,6 +1,35 @@
 'use strict';
 
-/* globals support: false */
+describe('injector.modules', function() {
+    it('should expose the loaded module info on the instance injector', function() {
+      var test1 = angular.module('test1', ['test2']).info({ version: '1.1' });
+      var test2 = angular.module('test2', []).info({ version: '1.2' });
+      module('test1');
+      inject(['$injector', function($injector) {
+        expect(Object.keys($injector.modules)).toEqual(['ng', 'ngLocale', 'ngMock', 'test1', 'test2']);
+        expect($injector.modules['test1'].info()).toEqual({ version: '1.1' });
+        expect($injector.modules['test2'].info()).toEqual({ version: '1.2' });
+      }]);
+    });
+
+    it('should expose the loaded module info on the provider injector', function() {
+      var providerInjector;
+      var test1 = angular.module('test1', ['test2']).info({ version: '1.1' });
+      var test2 = angular.module('test2', [])
+        .info({ version: '1.2' })
+        .provider('test', ['$injector', function($injector) {
+          providerInjector = $injector;
+          return {$get: function() {}};
+        }]);
+      module('test1');
+      // needed to ensure that the provider blocks are executed
+      inject();
+
+      expect(Object.keys(providerInjector.modules)).toEqual(['ng', 'ngLocale', 'ngMock', 'test1', 'test2']);
+      expect(providerInjector.modules['test1'].info()).toEqual({ version: '1.1' });
+      expect(providerInjector.modules['test2'].info()).toEqual({ version: '1.2' });
+    });
+});
 
 describe('injector', function() {
   var providers;
@@ -46,14 +75,13 @@ describe('injector', function() {
   it('should resolve dependency graph and instantiate all services just once', function() {
     var log = [];
 
-//          s1
-//        /  | \
-//       /  s2  \
-//      /  / | \ \
-//     /s3 < s4 > s5
-//    //
-//   s6
-
+    //          s1
+    //        /  | \
+    //       /  s2  \
+    //      /  / | \ \
+    //     /s3 < s4 > s5
+    //    //
+    //   s6
 
     providers('s1', function() { log.push('s1'); return {}; }, {$inject: ['s2', 's5', 's6']});
     providers('s2', function() { log.push('s2'); return {}; }, {$inject: ['s3', 's4', 's5']});
@@ -123,6 +151,164 @@ describe('injector', function() {
   it('should create a new $injector for the run phase', inject(function($injector) {
     expect($injector).not.toBe(providerInjector);
   }));
+
+
+  describe('loadNewModules', function() {
+    it('should be defined on $injector', function() {
+      var injector = createInjector([]);
+      expect(injector.loadNewModules).toEqual(jasmine.any(Function));
+    });
+
+    it('should allow new modules to be added after injector creation', function() {
+      angular.module('initial', []);
+      var injector = createInjector(['initial']);
+      expect(injector.modules['initial']).toBeDefined();
+      expect(injector.modules['lazy']).toBeUndefined();
+      angular.module('lazy', []);
+      injector.loadNewModules(['lazy']);
+      expect(injector.modules['lazy']).toBeDefined();
+    });
+
+    it('should execute runBlocks of new modules', function() {
+      var log = [];
+      angular.module('initial', []).run(function() { log.push('initial'); });
+      var injector = createInjector(['initial']);
+      log.push('created');
+
+      angular.module('a', []).run(function() { log.push('a'); });
+      injector.loadNewModules(['a']);
+      expect(log).toEqual(['initial', 'created', 'a']);
+    });
+
+    it('should execute configBlocks of new modules', function() {
+      var log = [];
+      angular.module('initial', []).config(function() { log.push('initial'); });
+      var injector = createInjector(['initial']);
+      log.push('created');
+
+      angular.module('a', [], function() { log.push('config1'); }).config(function() { log.push('config2'); });
+      injector.loadNewModules(['a']);
+      expect(log).toEqual(['initial', 'created', 'config1', 'config2']);
+    });
+
+    it('should execute runBlocks and configBlocks in the correct order', function() {
+      var log = [];
+      angular.module('initial', [], function() { log.push(1); })
+        .config(function() { log.push(2); })
+        .run(function() { log.push(3); });
+      var injector = createInjector(['initial']);
+      log.push('created');
+
+      angular.module('a', [], function() { log.push(4); })
+        .config(function() { log.push(5); })
+        .run(function() { log.push(6); });
+      injector.loadNewModules(['a']);
+      expect(log).toEqual([1, 2, 3, 'created', 4, 5, 6]);
+    });
+
+    it('should load dependent modules', function() {
+      angular.module('initial', []);
+      var injector = createInjector(['initial']);
+      expect(injector.modules['initial']).toBeDefined();
+      expect(injector.modules['lazy1']).toBeUndefined();
+      expect(injector.modules['lazy2']).toBeUndefined();
+      angular.module('lazy1', ['lazy2']);
+      angular.module('lazy2', []);
+      injector.loadNewModules(['lazy1']);
+      expect(injector.modules['lazy1']).toBeDefined();
+      expect(injector.modules['lazy2']).toBeDefined();
+    });
+
+    it('should execute blocks of new modules in the correct order', function() {
+      var log = [];
+      angular.module('initial', []);
+      var injector = createInjector(['initial']);
+
+      angular.module('lazy1', ['lazy2'], function() { log.push('lazy1-1'); })
+        .config(function() { log.push('lazy1-2'); })
+        .run(function() { log.push('lazy1-3'); });
+      angular.module('lazy2', [], function() { log.push('lazy2-1'); })
+        .config(function() { log.push('lazy2-2'); })
+        .run(function() { log.push('lazy2-3'); });
+
+      injector.loadNewModules(['lazy1']);
+      expect(log).toEqual(['lazy2-1', 'lazy2-2', 'lazy1-1', 'lazy1-2', 'lazy2-3', 'lazy1-3']);
+    });
+
+    it('should not reload a module that is already loaded', function() {
+      var log = [];
+      angular.module('initial', []).run(function() { log.push('initial'); });
+      var injector = createInjector(['initial']);
+      expect(log).toEqual(['initial']);
+
+      injector.loadNewModules(['initial']);
+      expect(log).toEqual(['initial']);
+
+      angular.module('a', []).run(function() { log.push('a'); });
+      injector.loadNewModules(['a']);
+      expect(log).toEqual(['initial', 'a']);
+      injector.loadNewModules(['a']);
+      expect(log).toEqual(['initial', 'a']);
+
+      angular.module('b', ['a']).run(function() { log.push('b'); });
+      angular.module('c', []).run(function() { log.push('c'); });
+      angular.module('d', ['b', 'c']).run(function() { log.push('d'); });
+      injector.loadNewModules(['d']);
+      expect(log).toEqual(['initial', 'a', 'b', 'c', 'd']);
+    });
+
+    it('should be able to register a service from a new module', function() {
+      var injector = createInjector([]);
+      angular.module('a', []).factory('aService', function() {
+        return {sayHello: function() { return 'Hello'; }};
+      });
+      injector.loadNewModules(['a']);
+      injector.invoke(function(aService) {
+        expect(aService.sayHello()).toEqual('Hello');
+      });
+    });
+
+
+    it('should be able to register a controller from a new module', function() {
+      var injector = createInjector(['ng']);
+      angular.module('a', []).controller('aController', function($scope) {
+        $scope.test = 'b';
+      });
+      injector.loadNewModules(['a']);
+      injector.invoke(function($controller) {
+        var scope = {};
+        $controller('aController', {$scope: scope});
+        expect(scope.test).toEqual('b');
+      });
+    });
+
+
+    it('should be able to register a filter from a new module', function() {
+      var injector = createInjector(['ng']);
+      angular.module('a', []).filter('aFilter', function() {
+        return function(input) { return input + ' filtered'; };
+      });
+      injector.loadNewModules(['a']);
+      injector.invoke(function(aFilterFilter) {
+        expect(aFilterFilter('test')).toEqual('test filtered');
+      });
+    });
+
+
+    it('should be able to register a directive from a new module', function() {
+      var injector = createInjector(['ng']);
+      angular.module('a', []).directive('aDirective', function() {
+        return {template: 'test directive'};
+      });
+      injector.loadNewModules(['a']);
+      injector.invoke(function($compile, $rootScope) {
+        var elem = $compile('<div a-directive></div>')($rootScope);  // compile and link
+        $rootScope.$digest();
+        expect(elem.text()).toEqual('test directive');
+        elem.remove();
+      });
+    });
+  });
 
   it('should have a false strictDi property', inject(function($injector) {
     expect($injector.strictDi).toBe(false);
@@ -255,16 +441,16 @@ describe('injector', function() {
 
 
     describe('es6', function() {
-      if (support.ES6Function) {
+      if (support.shorthandMethods) {
         // The functions are generated using `eval` as just having the ES6 syntax can break some browsers.
-        it('should be possible to annotate functions that are declared using ES6 syntax', function() {
+        it('should be possible to annotate shorthand methods', function() {
           // eslint-disable-next-line no-eval
           expect(annotate(eval('({ fn(x) { return; } })').fn)).toEqual(['x']);
         });
       }
 
 
-      if (support.fatArrow) {
+      if (support.fatArrows) {
         it('should create $inject for arrow functions', function() {
           // eslint-disable-next-line no-eval
           expect(annotate(eval('(a, b) => a'))).toEqual(['a', 'b']);
@@ -272,7 +458,7 @@ describe('injector', function() {
       }
 
 
-      if (support.fatArrow) {
+      if (support.fatArrows) {
         it('should create $inject for arrow functions with no parenthesis', function() {
           // eslint-disable-next-line no-eval
           expect(annotate(eval('a => a'))).toEqual(['a']);
@@ -280,19 +466,11 @@ describe('injector', function() {
       }
 
 
-      if (support.fatArrow) {
+      if (support.fatArrows) {
         it('should take args before first arrow', function() {
           // eslint-disable-next-line no-eval
           expect(annotate(eval('a => b => b'))).toEqual(['a']);
         });
-
-        // Support: Chrome 50-51 only
-        // TODO (gkalpak): Remove when Chrome v52 is released.
-        // it('should be able to inject fat-arrow function', function() {
-        //   inject(($injector) => {
-        //     expect($injector).toBeDefined();
-        //   });
-        // });
       }
 
       if (support.classes) {
@@ -305,39 +483,24 @@ describe('injector', function() {
           expect(instance.aVal()).toEqual('a-value');
         });
 
-        if (/chrome/.test(window.navigator.userAgent)) {
-          they('should detect ES6 classes regardless of whitespace/comments ($prop)', [
-            'class Test {}',
-            'class Test{}',
-            'class //<--ES6 stuff\nTest {}',
-            'class//<--ES6 stuff\nTest {}',
-            'class {}',
-            'class{}',
-            'class //<--ES6 stuff\n {}',
-            'class//<--ES6 stuff\n {}',
-            'class/* Test */{}',
-            'class /* Test */ {}'
-          ], function(classDefinition) {
-            // eslint-disable-next-line no-eval
-            var Clazz = eval('(' + classDefinition + ')');
-            var instance = injector.invoke(Clazz);
+        they('should detect ES6 classes regardless of whitespace/comments ($prop)', [
+          'class Test {}',
+          'class Test{}',
+          'class //<--ES6 stuff\nTest {}',
+          'class//<--ES6 stuff\nTest {}',
+          'class {}',
+          'class{}',
+          'class //<--ES6 stuff\n {}',
+          'class//<--ES6 stuff\n {}',
+          'class/* Test */{}',
+          'class /* Test */ {}'
+        ], function(classDefinition) {
+          // eslint-disable-next-line no-eval
+          var Clazz = eval('(' + classDefinition + ')');
+          var instance = injector.invoke(Clazz);
 
-            expect(instance).toEqual(jasmine.any(Clazz));
-          });
-        }
-
-        // Support: Chrome 50-51 only
-        // TODO (gkalpak): Remove when Chrome v52 is released.
-        // it('should be able to invoke classes', function() {
-        //   class Test {
-        //     constructor($injector) {
-        //       this.$injector = $injector;
-        //     }
-        //   }
-        //   var instance = injector.invoke(Test, null, null, 'Test');
-
-        //   expect(instance.$injector).toBe(injector);
-        // });
+          expect(instance).toEqual(jasmine.any(Clazz));
+        });
       }
     });
 

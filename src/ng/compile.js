@@ -120,7 +120,7 @@
  * ```
  *
  * ### Life-cycle hooks
- * Directive controllers can provide the following methods that are called by Angular at points in the life-cycle of the
+ * Directive controllers can provide the following methods that are called by AngularJS at points in the life-cycle of the
  * directive:
  * * `$onInit()` - Called on each controller after all the controllers on an element have been constructed and
  *   had their bindings initialized (and before the pre &amp; post linking functions for the directives on
@@ -128,12 +128,13 @@
  * * `$onChanges(changesObj)` - Called whenever one-way (`<`) or interpolation (`@`) bindings are updated. The
  *   `changesObj` is a hash whose keys are the names of the bound properties that have changed, and the values are an
  *   object of the form `{ currentValue, previousValue, isFirstChange() }`. Use this hook to trigger updates within a
- *   component such as cloning the bound value to prevent accidental mutation of the outer value.
+ *   component such as cloning the bound value to prevent accidental mutation of the outer value. Note that this will
+ *   also be called when your bindings are initialized.
  * * `$doCheck()` - Called on each turn of the digest cycle. Provides an opportunity to detect and act on
  *   changes. Any actions that you wish to take in response to the changes that you detect must be
  *   invoked from this hook; implementing this has no effect on when `$onChanges` is called. For example, this hook
  *   could be useful if you wish to perform a deep equality check, or to check a Date object, changes to which would not
- *   be detected by Angular's change detector and thus not trigger `$onChanges`. This hook is invoked with no arguments;
+ *   be detected by AngularJS's change detector and thus not trigger `$onChanges`. This hook is invoked with no arguments;
  *   if detecting changes, you must store the previous value(s) for comparison to the current values.
  * * `$onDestroy()` - Called on a controller when its containing scope is destroyed. Use this hook for releasing
  *   external resources, watches and event handlers. Note that components have their `$onDestroy()` hooks called in
@@ -145,18 +146,18 @@
  *   they are waiting for their template to load asynchronously and their own compilation and linking has been
  *   suspended until that occurs.
  *
- * #### Comparison with Angular 2 life-cycle hooks
- * Angular 2 also uses life-cycle hooks for its components. While the Angular 1 life-cycle hooks are similar there are
- * some differences that you should be aware of, especially when it comes to moving your code from Angular 1 to Angular 2:
+ * #### Comparison with life-cycle hooks in the new Angular
+ * The new Angular also uses life-cycle hooks for its components. While the AngularJS life-cycle hooks are similar there are
+ * some differences that you should be aware of, especially when it comes to moving your code from AngularJS to Angular:
  *
- * * Angular 1 hooks are prefixed with `$`, such as `$onInit`. Angular 2 hooks are prefixed with `ng`, such as `ngOnInit`.
- * * Angular 1 hooks can be defined on the controller prototype or added to the controller inside its constructor.
- *   In Angular 2 you can only define hooks on the prototype of the Component class.
- * * Due to the differences in change-detection, you may get many more calls to `$doCheck` in Angular 1 than you would to
- *   `ngDoCheck` in Angular 2
+ * * AngularJS hooks are prefixed with `$`, such as `$onInit`. Angular hooks are prefixed with `ng`, such as `ngOnInit`.
+ * * AngularJS hooks can be defined on the controller prototype or added to the controller inside its constructor.
+ *   In Angular you can only define hooks on the prototype of the Component class.
+ * * Due to the differences in change-detection, you may get many more calls to `$doCheck` in AngularJS than you would to
+ *   `ngDoCheck` in Angular.
  * * Changes to the model inside `$doCheck` will trigger new turns of the digest loop, which will cause the changes to be
  *   propagated throughout the application.
- *   Angular 2 does not allow the `ngDoCheck` hook to trigger a change outside of the component. It will either throw an
+ *   Angular does not allow the `ngDoCheck` hook to trigger a change outside of the component. It will either throw an
  *   error or do nothing depending upon the state of `enableProdMode()`.
  *
  * #### Life-cycle hook examples
@@ -276,10 +277,12 @@
  * the directive's element. If multiple directives on the same element request a new scope,
  * only one new scope is created.
  *
- * * **`{...}` (an object hash):** A new "isolate" scope is created for the directive's element. The
- * 'isolate' scope differs from normal scope in that it does not prototypically inherit from its parent
- * scope. This is useful when creating reusable components, which should not accidentally read or modify
- * data in the parent scope.
+ * * **`{...}` (an object hash):** A new "isolate" scope is created for the directive's template.
+ * The 'isolate' scope differs from normal scope in that it does not prototypically
+ * inherit from its parent scope. This is useful when creating reusable components, which should not
+ * accidentally read or modify data in the parent scope. Note that an isolate scope
+ * directive without a `template` or `templateUrl` will not apply the isolate scope
+ * to its children elements.
  *
  * The 'isolate' scope object hash defines a set of local scope properties derived from attributes on the
  * directive's element. These local properties are useful for aliasing values for templates. The keys in
@@ -300,21 +303,22 @@
  *   name. Given `<my-component my-attr="parentModel">` and the isolate scope definition `scope: {
  *   localModel: '=myAttr' }`, the property `localModel` on the directive's scope will reflect the
  *   value of `parentModel` on the parent scope. Changes to `parentModel` will be reflected in
- *   `localModel` and vice versa. Optional attributes should be marked as such with a question mark:
- *   `=?` or `=?attr`. If the binding expression is non-assignable, or if the attribute isn't
- *   optional and doesn't exist, an exception ({@link error/$compile/nonassign `$compile:nonassign`})
- *   will be thrown upon discovering changes to the local value, since it will be impossible to sync
- *   them back to the parent scope. By default, the {@link ng.$rootScope.Scope#$watch `$watch`}
+ *   `localModel` and vice versa. If the binding expression is non-assignable, or if the attribute
+ *   isn't  optional and doesn't exist, an exception
+ *   ({@link error/$compile/nonassign `$compile:nonassign`}) will be thrown upon discovering changes
+ *   to the local value, since it will be impossible to sync them back to the parent scope.
+ *
+ *   By default, the {@link ng.$rootScope.Scope#$watch `$watch`}
  *   method is used for tracking changes, and the equality check is based on object identity.
  *   However, if an object literal or an array literal is passed as the binding expression, the
  *   equality check is done by value (using the {@link angular.equals} function). It's also possible
  *   to watch the evaluated value shallowly with {@link ng.$rootScope.Scope#$watchCollection
- *   `$watchCollection`}: use `=*` or `=*attr` (`=*?` or `=*?attr` if the attribute is optional).
+ *   `$watchCollection`}: use `=*` or `=*attr`
  *
   * * `<` or `<attr` - set up a one-way (one-directional) binding between a local scope property and an
  *   expression passed via the attribute `attr`. The expression is evaluated in the context of the
  *   parent scope. If no `attr` name is specified then the attribute name is assumed to be the same as the
- *   local name. You can also make the binding optional by adding `?`: `<?` or `<?attr`.
+ *   local name.
  *
  *   For example, given `<my-component my-attr="parentModel">` and directive definition of
  *   `scope: { localModel:'<myAttr' }`, then the isolated scope property `localModel` will reflect the
@@ -335,6 +339,11 @@
  *   One-way binding is useful if you do not plan to propagate changes to your isolated scope bindings
  *   back to the parent. However, it does not make this completely impossible.
  *
+ *   By default, the {@link ng.$rootScope.Scope#$watch `$watch`}
+ *   method is used for tracking changes, and the equality check is based on object identity.
+ *   It's also possible to watch the evaluated value shallowly with
+ *   {@link ng.$rootScope.Scope#$watchCollection `$watchCollection`}: use `<*` or `<*attr`
+ *
  * * `&` or `&attr` - provides a way to execute an expression in the context of the parent scope. If
  *   no `attr` name is specified then the attribute name is assumed to be the same as the local name.
  *   Given `<my-component my-attr="count = count + value">` and the isolate scope definition `scope: {
@@ -343,6 +352,36 @@
  *   via an expression to the parent scope. This can be done by passing a map of local variable names
  *   and values into the expression wrapper fn. For example, if the expression is `increment(amount)`
  *   then we can specify the amount value by calling the `localFn` as `localFn({amount: 22})`.
+ *
+ * All 4 kinds of bindings (`@`, `=`, `<`, and `&`) can be made optional by adding `?` to the expression.
+ * The marker must come after the mode and before the attribute name.
+ * See the {@link error/$compile/iscp Invalid Isolate Scope Definition error} for definition examples.
+ * This is useful to refine the interface directives provide.
+ * One subtle difference between optional and non-optional happens **when the binding attribute is not
+ * set**:
+ * - the binding is optional: the property will not be defined
+ * - the binding is not optional: the property is defined
+ *
+ * ```js
+ *app.directive('testDir', function() {
+    return {
+      scope: {
+        notoptional: '=',
+        optional: '=?',
+      },
+      bindToController: true,
+      controller: function() {
+        this.$onInit = function() {
+          console.log(this.hasOwnProperty('notoptional')) // true
+          console.log(this.hasOwnProperty('optional')) // false
+        }
+      }
+    }
+  })
+ *```
+ *
+ *
+ * ##### Combining directives with different scope defintions
  *
  * In general it's possible to apply more than one directive to one element, but there might be limitations
  * depending on the type of scope required by the directives. The following points will help explain these limitations.
@@ -370,12 +409,6 @@
  * properties. You can access these bindings once they have been initialized by providing a controller method called
  * `$onInit`, which is called after all the controllers on an element have been constructed and had their bindings
  * initialized.
- *
- * <div class="alert alert-warning">
- * **Deprecation warning:** although bindings for non-ES6 class controllers are currently
- * bound to `this` before the controller constructor is called, this use is now deprecated. Please place initialization
- * code that relies upon bindings inside a `$onInit` method on the controller, instead.
- * </div>
  *
  * It is also possible to set `bindToController` to an object hash with the same format as the `scope` property.
  * This will set up the scope bindings to the controller directly. Note that `scope` can still be used
@@ -503,8 +536,12 @@
  * $sce#getTrustedResourceUrl $sce.getTrustedResourceUrl}.
  *
  *
- * #### `replace` ([*DEPRECATED*!], will be removed in next major release - i.e. v2.0)
- * specify what the template should replace. Defaults to `false`.
+ * #### `replace`
+ * <div class="alert alert-danger">
+ * **Note:** `replace` is deprecated in AngularJS and has been removed in the new Angular (v2+).
+ * </div>
+ *
+ * Specifies what the template should replace. Defaults to `false`.
  *
  * * `true` - the template will replace the directive's element.
  * * `false` - the template will replace the contents of the directive's element.
@@ -844,7 +881,7 @@
         });
       })
       .controller('GreeterController', ['$scope', function($scope) {
-        $scope.name = 'Angular';
+        $scope.name = 'AngularJS';
         $scope.html = 'Hello {{name}}';
       }]);
     </script>
@@ -858,11 +895,11 @@
      it('should auto compile', function() {
        var textarea = $('textarea');
        var output = $('div[compile]');
-       // The initial state reads 'Hello Angular'.
-       expect(output.getText()).toBe('Hello Angular');
+       // The initial state reads 'Hello AngularJS'.
+       expect(output.getText()).toBe('Hello AngularJS');
        textarea.clear();
        textarea.sendKeys('{{name}}!');
-       expect(output.getText()).toBe('Angular!');
+       expect(output.getText()).toBe('AngularJS!');
      });
    </file>
  </example>
@@ -916,7 +953,7 @@
  * element passed in, or the clone of the element if the `cloneAttachFn` is provided.
  *
  * After linking the view is not updated until after a call to $digest which typically is done by
- * Angular automatically.
+ * AngularJS automatically.
  *
  * If you need access to the bound view, there are two ways to do it:
  *
@@ -942,7 +979,7 @@
  *
  *
  * For information on how the compiler works, see the
- * {@link guide/compiler Angular HTML Compiler} section of the Developer Guide.
+ * {@link guide/compiler AngularJS HTML Compiler} section of the Developer Guide.
  *
  * @knownIssue
  *
@@ -952,6 +989,58 @@
    compiled again. This is an undesired effect and can lead to misbehaving directives, performance issues,
    and memory leaks. Refer to the Compiler Guide {@link guide/compiler#double-compilation-and-how-to-avoid-it
    section on double compilation} for an in-depth explanation and ways to avoid it.
+
+ * @knownIssue
+
+   ### Issues with `replace: true`
+ *
+ * <div class="alert alert-danger">
+ *   **Note**: {@link $compile#-replace- `replace: true`} is deprecated and not recommended to use,
+ *   mainly due to the issues listed here. It has been completely removed in the new Angular.
+ * </div>
+ *
+ * #### Attribute values are not merged
+ *
+ * When a `replace` directive encounters the same attribute on the original and the replace node,
+ * it will simply deduplicate the attribute and join the values with a space or with a `;` in case of
+ * the `style` attribute.
+ * ```html
+ * Original Node: <span class="original" style="color: red;"></span>
+ * Replace Template: <span class="replaced" style="background: blue;"></span>
+ * Result: <span class="original replaced" style="color: red; background: blue;"></span>
+ * ```
+ *
+ * That means attributes that contain AngularJS expressions will not be merged correctly, e.g.
+ * {@link ngShow} or {@link ngClass} will cause a {@link $parse} error:
+ *
+ * ```html
+ * Original Node: <span ng-class="{'something': something}" ng-show="!condition"></span>
+ * Replace Template: <span ng-class="{'else': else}" ng-show="otherCondition"></span>
+ * Result: <span ng-class="{'something': something} {'else': else}" ng-show="!condition otherCondition"></span>
+ * ```
+ *
+ * See issue [#5695](https://github.com/angular/angular.js/issues/5695).
+ *
+ * #### Directives are not deduplicated before compilation
+ *
+ * When the original node and the replace template declare the same directive(s), they will be
+ * {@link guide/compiler#double-compilation-and-how-to-avoid-it compiled twice} because the compiler
+ * does not deduplicate them. In many cases, this is not noticable, but e.g. {@link ngModel} will
+ * attach `$formatters` and `$parsers` twice.
+ *
+ * See issue [#2573](https://github.com/angular/angular.js/issues/2573).
+ *
+ * #### `transclude: element` in the replace template root can have unexpected effects
+ *
+ * When the replace template has a directive at the root node that uses
+ * {@link $compile#-transclude- `transclude: element`}, e.g.
+ * {@link ngIf} or {@link ngRepeat}, the DOM structure or scope inheritance can be incorrect.
+ * See the following issues:
+ *
+ * - Incorrect scope on replaced element:
+ * [#9837](https://github.com/angular/angular.js/issues/9837)
+ * - Different DOM between `template` and `templateUrl`:
+ * [#10612](https://github.com/angular/angular.js/issues/14326)
  *
  */
 
@@ -983,11 +1072,13 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
   var bindingCache = createMap();
 
   function parseIsolateBindings(scope, directiveName, isController) {
-    var LOCAL_REGEXP = /^\s*([@&<]|=(\*?))(\??)\s*(\w*)\s*$/;
+    var LOCAL_REGEXP = /^([@&]|[=<](\*?))(\??)\s*([\w$]*)$/;
 
     var bindings = createMap();
 
     forEach(scope, function(definition, scopeName) {
+      definition = definition.trim();
+
       if (definition in bindingCache) {
         bindings[scopeName] = bindingCache[definition];
         return;
@@ -1141,7 +1232,8 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
    * @ngdoc method
    * @name $compileProvider#component
    * @module ng
-   * @param {string} name Name of the component in camelCase (i.e. `myComp` which will match `<my-comp>`)
+   * @param {string|Object} name Name of the component in camelCase (i.e. `myComp` which will match `<my-comp>`),
+   *    or an object map of components where the keys are the names and the values are the component definition objects.
    * @param {Object} options Component definition object (a simplified
    *    {@link ng.$compile#directive-definition-object directive definition object}),
    *    with the following properties (all optional):
@@ -1224,6 +1316,11 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
    * See also {@link ng.$compileProvider#directive $compileProvider.directive()}.
    */
   this.component = function registerComponent(name, options) {
+    if (!isString(name)) {
+      forEach(name, reverseParams(bind(this, registerComponent)));
+      return this;
+    }
+
     var controller = options.controller || function() {};
 
     function factory($injector) {
@@ -1260,7 +1357,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
     // TODO(pete) remove the following `forEach` before we release 1.6.0
     // The component-router@0.2.0 looks for the annotations on the controller constructor
-    // Nothing in Angular looks for annotations on the factory function but we can't remove
+    // Nothing in AngularJS looks for annotations on the factory function but we can't remove
     // it from 1.5.x yet.
 
     // Copy any annotation properties (starting with $) over to the factory and controller constructor functions
@@ -1353,7 +1450,12 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
    * binding information and a reference to the current scope on to DOM elements.
    * If enabled, the compiler will add the following to DOM elements that have been bound to the scope
    * * `ng-binding` CSS class
+   * * `ng-scope` and `ng-isolated-scope` CSS classes
    * * `$binding` data property containing an array of the binding expressions
+   * * Data properties used by the {@link angular.element#methods `scope()`/`isolateScope()` methods} to return
+   *   the element's scope.
+   * * Placeholder comments will contain information about what directive and binding caused the placeholder.
+   *   E.g. `<!-- ngIf: shouldShow() -->`.
    *
    * You may want to disable this in production for a significant performance boost. See
    * {@link guide/production#disabling-debug-data Disabling Debug Data} for more.
@@ -1371,33 +1473,32 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
   /**
    * @ngdoc method
-   * @name  $compileProvider#preAssignBindingsEnabled
+   * @name  $compileProvider#strictComponentBindingsEnabled
    *
-   * @param {boolean=} enabled update the preAssignBindingsEnabled state if provided, otherwise just return the
-   * current preAssignBindingsEnabled state
+   * @param {boolean=} enabled update the strictComponentBindingsEnabled state if provided,
+   * otherwise return the current strictComponentBindingsEnabled state.
    * @returns {*} current value if used as getter or itself (chaining) if used as setter
    *
    * @kind function
    *
    * @description
-   * Call this method to enable/disable whether directive controllers are assigned bindings before
-   * calling the controller's constructor.
-   * If enabled (true), the compiler assigns the value of each of the bindings to the
-   * properties of the controller object before the constructor of this object is called.
+   * Call this method to enable / disable the strict component bindings check. If enabled, the
+   * compiler will enforce that all scope / controller bindings of a
+   * {@link $compileProvider#directive directive} / {@link $compileProvider#component component}
+   * that are not set as optional with `?`, must be provided when the directive is instantiated.
+   * If not provided, the compiler will throw the
+   * {@link error/$compile/missingattr $compile:missingattr error}.
    *
-   * If disabled (false), the compiler calls the constructor first before assigning bindings.
-   *
-   * The default value is true in Angular 1.5.x but will switch to false in Angular 1.6.x.
+   * The default value is false.
    */
-  var preAssignBindingsEnabled = false;
-  this.preAssignBindingsEnabled = function(enabled) {
+  var strictComponentBindingsEnabled = false;
+  this.strictComponentBindingsEnabled = function(enabled) {
     if (isDefined(enabled)) {
-      preAssignBindingsEnabled = enabled;
+      strictComponentBindingsEnabled = enabled;
       return this;
     }
-    return preAssignBindingsEnabled;
+    return strictComponentBindingsEnabled;
   };
-
 
   var TTL = 10;
   /**
@@ -1487,9 +1588,9 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
   this.$get = [
             '$injector', '$interpolate', '$exceptionHandler', '$templateRequest', '$parse',
-            '$controller', '$rootScope', '$sce', '$animate', '$$sanitizeUri',
+            '$controller', '$rootScope', '$sce', '$animate',
     function($injector,   $interpolate,   $exceptionHandler,   $templateRequest,   $parse,
-             $controller,   $rootScope,   $sce,   $animate,   $$sanitizeUri) {
+             $controller,   $rootScope,   $sce,   $animate) {
 
     var SIMPLE_ATTR_NAME = /^\w/;
     var specialAttrHolder = window.document.createElement('div');
@@ -1514,19 +1615,15 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
         }
         // We must run this hook in an apply since the $$postDigest runs outside apply
         $rootScope.$apply(function() {
-          var errors = [];
           for (var i = 0, ii = onChangesQueue.length; i < ii; ++i) {
             try {
               onChangesQueue[i]();
             } catch (e) {
-              errors.push(e);
+              $exceptionHandler(e);
             }
           }
           // Reset the queue to trigger a new schedule next time there is a change
           onChangesQueue = undefined;
-          if (errors.length) {
-            throw errors;
-          }
         });
       } finally {
         onChangesTtl++;
@@ -1638,8 +1735,8 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
        */
       $set: function(key, value, writeAttr, attrName) {
         // TODO: decide whether or not to throw an error if "class"
-        //is set through this function since it may cause $updateClass to
-        //become unstable.
+        // is set through this function since it may cause $updateClass to
+        // become unstable.
 
         var node = this.$$element[0],
             booleanKey = getBooleanAttrName(node, key),
@@ -1669,12 +1766,20 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
         nodeName = nodeName_(this.$$element);
 
-        if ((nodeName === 'a' && (key === 'href' || key === 'xlinkHref')) ||
-            (nodeName === 'img' && key === 'src')) {
-          // sanitize a[href] and img[src] values
-          this[key] = value = $$sanitizeUri(value, key === 'src');
-        } else if (nodeName === 'img' && key === 'srcset' && isDefined(value)) {
-          // sanitize img[srcset] values
+        // Sanitize img[srcset] values.
+        if (nodeName === 'img' && key === 'srcset' && value) {
+          if (!isString(value)) {
+            throw $compileMinErr('srcset', 'Can\'t pass trusted values to `$set(\'srcset\', value)`: "{0}"', value.toString());
+          }
+
+          // Such values are a bit too complex to handle automatically inside $sce.
+          // Instead, we sanitize each of the URIs individually, which works, even dynamically.
+
+          // It's not possible to work around this using `$sce.trustAsMediaUrl`.
+          // If you want to programmatically set explicitly trusted unsafe URLs, you should use
+          // `$sce.trustAsHtml` on the whole `img` tag and inject it into the DOM using the
+          // `ng-bind-html` directive.
+
           var result = '';
 
           // first check if there are spaces because it's not the same pattern
@@ -1691,16 +1796,16 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           for (var i = 0; i < nbrUrisWith2parts; i++) {
             var innerIdx = i * 2;
             // sanitize the uri
-            result += $$sanitizeUri(trim(rawUris[innerIdx]), true);
+            result += $sce.getTrustedMediaUrl(trim(rawUris[innerIdx]));
             // add the descriptor
-            result += (' ' + trim(rawUris[innerIdx + 1]));
+            result += ' ' + trim(rawUris[innerIdx + 1]);
           }
 
           // split the last item into uri and descriptor
           var lastTuple = trim(rawUris[i * 2]).split(/\s/);
 
           // sanitize the last uri
-          result += $$sanitizeUri(trim(lastTuple[0]), true);
+          result += $sce.getTrustedMediaUrl(trim(lastTuple[0]));
 
           // and add the last descriptor if any
           if (lastTuple.length === 2) {
@@ -1894,7 +1999,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           // for call to the link function.
           // Note: This will already clone the nodes...
           $linkNode = jqLite(
-            wrapTemplate(namespace, jqLite('<div>').append($compileNodes).html())
+            wrapTemplate(namespace, jqLite('<div></div>').append($compileNodes).html())
           );
         } else if (cloneConnectFn) {
           // important!!: we must call our jqLite.clone() since the jQuery one is trying to be smart
@@ -2448,17 +2553,6 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             compileNode = $compileNode[0];
             replaceWith(jqCollection, sliceArgs($template), compileNode);
 
-            // Support: Chrome < 50
-            // https://github.com/angular/angular.js/issues/14041
-
-            // In the versions of V8 prior to Chrome 50, the document fragment that is created
-            // in the `replaceWith` function is improperly garbage collected despite still
-            // being referenced by the `parentNode` property of all of the child nodes.  By adding
-            // a reference to the fragment via a different property, we can avoid that incorrect
-            // behavior.
-            // TODO: remove this line after Chrome 50 has been released
-            $template[0].$$parentNode = $template[0].parentNode;
-
             childTranscludeFn = compilationGenerator(mightHaveMultipleTransclusionError, $template, transcludeFn, terminalPriority,
                                         replaceDirective && replaceDirective.name, {
                                           // Don't pass in:
@@ -2480,7 +2574,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
               // We have transclusion slots,
               // collect them up, compile them and store their transclusion functions
-              $template = [];
+              $template = window.document.createDocumentFragment();
 
               var slotMap = createMap();
               var filledSlots = createMap();
@@ -2508,10 +2602,10 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
                 var slotName = slotMap[directiveNormalize(nodeName_(node))];
                 if (slotName) {
                   filledSlots[slotName] = true;
-                  slots[slotName] = slots[slotName] || [];
-                  slots[slotName].push(node);
+                  slots[slotName] = slots[slotName] || window.document.createDocumentFragment();
+                  slots[slotName].appendChild(node);
                 } else {
-                  $template.push(node);
+                  $template.appendChild(node);
                 }
               });
 
@@ -2525,9 +2619,12 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               for (var slotName in slots) {
                 if (slots[slotName]) {
                   // Only define a transclusion function if the slot was filled
-                  slots[slotName] = compilationGenerator(mightHaveMultipleTransclusionError, slots[slotName], transcludeFn);
+                  var slotCompileNodes = jqLite(slots[slotName].childNodes);
+                  slots[slotName] = compilationGenerator(mightHaveMultipleTransclusionError, slotCompileNodes, transcludeFn);
                 }
               }
+
+              $template = jqLite($template.childNodes);
             }
 
             $compileNode.empty(); // clear contents
@@ -2718,33 +2815,11 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           var controller = elementControllers[name];
           var bindings = controllerDirective.$$bindings.bindToController;
 
-          if (preAssignBindingsEnabled) {
-            if (bindings) {
-              controller.bindingInfo =
-                initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
-            } else {
-              controller.bindingInfo = {};
-            }
-
-            var controllerResult = controller();
-            if (controllerResult !== controller.instance) {
-              // If the controller constructor has a return value, overwrite the instance
-              // from setupControllers
-              controller.instance = controllerResult;
-              $element.data('$' + controllerDirective.name + 'Controller', controllerResult);
-              if (controller.bindingInfo.removeWatches) {
-                controller.bindingInfo.removeWatches();
-              }
-              controller.bindingInfo =
-                initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
-            }
-          } else {
-            controller.instance = controller();
-            $element.data('$' + controllerDirective.name + 'Controller', controller.instance);
-            controller.bindingInfo =
-              initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
+          controller.instance = controller();
+          $element.data('$' + controllerDirective.name + 'Controller', controller.instance);
+          controller.bindingInfo =
+            initializeDirectiveBindings(controllerScope, attrs, controller.instance, bindings, controllerDirective);
           }
-        }
 
         // Bind the required controllers to the controller, if `require` is an object and `bindToController` is truthy
         forEach(controllerDirectives, function(controllerDirective, name) {
@@ -3152,10 +3227,10 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           }
           linkQueue = null;
         }).catch(function(error) {
-          if (error instanceof Error) {
+          if (isError(error)) {
             $exceptionHandler(error);
           }
-        }).catch(noop);
+        });
 
       return function delayedNodeLinkFn(ignoreChildLinkFn, scope, node, rootElement, boundTranscludeFn) {
         var childBoundTranscludeFn = boundTranscludeFn;
@@ -3248,18 +3323,30 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       }
       var tag = nodeName_(node);
       // All tags with src attributes require a RESOURCE_URL value, except for
-      // img and various html5 media tags.
+      // img and various html5 media tags, which require the MEDIA_URL context.
       if (attrNormalizedName === 'src' || attrNormalizedName === 'ngSrc') {
         if (['img', 'video', 'audio', 'source', 'track'].indexOf(tag) === -1) {
           return $sce.RESOURCE_URL;
         }
-      // maction[xlink:href] can source SVG.  It's not limited to <maction>.
-      } else if (attrNormalizedName === 'xlinkHref' ||
+        return $sce.MEDIA_URL;
+      } else if (attrNormalizedName === 'xlinkHref') {
+        // Some xlink:href are okay, most aren't
+        if (tag === 'image') return $sce.MEDIA_URL;
+        if (tag === 'a') return $sce.URL;
+        return $sce.RESOURCE_URL;
+      } else if (
+          // Formaction
           (tag === 'form' && attrNormalizedName === 'action') ||
+          // If relative URLs can go where they are not expected to, then
+          // all sorts of trust issues can arise.
+          (tag === 'base' && attrNormalizedName === 'href') ||
           // links can be stylesheets or imports, which can run script in the current origin
           (tag === 'link' && attrNormalizedName === 'href')
       ) {
         return $sce.RESOURCE_URL;
+      } else if (tag === 'a' && (attrNormalizedName === 'href' ||
+                                 attrNormalizedName === 'ngHref')) {
+        return $sce.URL;
       }
     }
 
@@ -3390,7 +3477,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       }
 
       if (jqLite.hasData(firstElementToRemove)) {
-        // Copy over user data (that includes Angular's $scope etc.). Don't copy private
+        // Copy over user data (that includes AngularJS's $scope etc.). Don't copy private
         // data here because there's no public interface in jQuery to do that and copying over
         // event listeners (which is the main use of private data) wouldn't work anyway.
         jqLite.data(newNode, jqLite.data(firstElementToRemove));
@@ -3425,12 +3512,20 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       }
     }
 
+    function strictBindingsCheck(attrName, directiveName) {
+      if (strictComponentBindingsEnabled) {
+        throw $compileMinErr('missingattr',
+          'Attribute \'{0}\' of \'{1}\' is non-optional and must be set!',
+          attrName, directiveName);
+      }
+    }
 
     // Set up $watches for isolate scope and controller bindings.
     function initializeDirectiveBindings(scope, attrs, destination, bindings, directive) {
       var removeWatchCollection = [];
       var initialChanges = {};
       var changes;
+
       forEach(bindings, function initializeBinding(definition, scopeName) {
         var attrName = definition.attrName,
         optional = definition.optional,
@@ -3442,7 +3537,9 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
 
           case '@':
             if (!optional && !hasOwnProperty.call(attrs, attrName)) {
+              strictBindingsCheck(attrName, directive.name);
               destination[scopeName] = attrs[attrName] = undefined;
+
             }
             removeWatch = attrs.$observe(attrName, function(value) {
               if (isString(value) || isBoolean(value)) {
@@ -3458,7 +3555,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
               // the value is there for use in the link fn
               destination[scopeName] = $interpolate(lastValue)(scope);
             } else if (isBoolean(lastValue)) {
-              // If the attributes is one of the BOOLEAN_ATTR then Angular will have converted
+              // If the attributes is one of the BOOLEAN_ATTR then AngularJS will have converted
               // the value to boolean rather than a string, so we special case this situation
               destination[scopeName] = lastValue;
             }
@@ -3469,6 +3566,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           case '=':
             if (!hasOwnProperty.call(attrs, attrName)) {
               if (optional) break;
+              strictBindingsCheck(attrName, directive.name);
               attrs[attrName] = undefined;
             }
             if (optional && !attrs[attrName]) break;
@@ -3477,8 +3575,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
             if (parentGet.literal) {
               compare = equals;
             } else {
-              // eslint-disable-next-line no-self-compare
-              compare = function simpleCompare(a, b) { return a === b || (a !== a && b !== b); };
+              compare = simpleCompare;
             }
             parentSet = parentGet.assign || function() {
               // reset the change, or we will throw this exception on every $digest
@@ -3514,31 +3611,35 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
           case '<':
             if (!hasOwnProperty.call(attrs, attrName)) {
               if (optional) break;
+              strictBindingsCheck(attrName, directive.name);
               attrs[attrName] = undefined;
             }
             if (optional && !attrs[attrName]) break;
 
             parentGet = $parse(attrs[attrName]);
-            var deepWatch = parentGet.literal;
+            var isLiteral = parentGet.literal;
 
             var initialValue = destination[scopeName] = parentGet(scope);
             initialChanges[scopeName] = new SimpleChange(_UNINITIALIZED_VALUE, destination[scopeName]);
 
-            removeWatch = scope.$watch(parentGet, function parentValueWatchAction(newValue, oldValue) {
+            removeWatch = scope[definition.collection ? '$watchCollection' : '$watch'](parentGet, function parentValueWatchAction(newValue, oldValue) {
               if (oldValue === newValue) {
-                if (oldValue === initialValue || (deepWatch && equals(oldValue, initialValue))) {
+                if (oldValue === initialValue || (isLiteral && equals(oldValue, initialValue))) {
                   return;
                 }
                 oldValue = initialValue;
               }
               recordChanges(scopeName, newValue, oldValue);
               destination[scopeName] = newValue;
-            }, deepWatch);
+            });
 
             removeWatchCollection.push(removeWatch);
             break;
 
           case '&':
+            if (!optional && !hasOwnProperty.call(attrs, attrName)) {
+              strictBindingsCheck(attrName, directive.name);
+            }
             // Don't assign Object.prototype method to scope
             parentGet = attrs.hasOwnProperty(attrName) ? $parse(attrs[attrName]) : noop;
 
@@ -3553,9 +3654,7 @@ function $CompileProvider($provide, $$sanitizeUriProvider) {
       });
 
       function recordChanges(key, currentValue, previousValue) {
-        if (isFunction(destination.$onChanges) && currentValue !== previousValue &&
-            // eslint-disable-next-line no-self-compare
-            (currentValue === currentValue || previousValue === previousValue)) {
+        if (isFunction(destination.$onChanges) && !simpleCompare(currentValue, previousValue)) {
           // If we have not already scheduled the top level onChangesQueue handler then do so now
           if (!onChangesQueue) {
             scope.$$postDigest(flushOnChangesQueue);
@@ -3610,7 +3709,9 @@ var SPECIAL_CHARS_REGEXP = /[:\-_]+(.)/g;
 function directiveNormalize(name) {
   return name
     .replace(PREFIX_REGEXP, '')
-    .replace(SPECIAL_CHARS_REGEXP, fnCamelCaseReplace);
+    .replace(SPECIAL_CHARS_REGEXP, function(_, letter, offset) {
+      return offset ? letter.toUpperCase() : letter;
+    });
 }
 
 /**
@@ -3620,7 +3721,7 @@ function directiveNormalize(name) {
  * @description
  * A shared object between directive compile / linking functions which contains normalized DOM
  * element attributes. The values reflect current binding state `{{ }}`. The normalization is
- * needed since all of these are treated as equivalent in Angular:
+ * needed since all of these are treated as equivalent in AngularJS:
  *
  * ```
  *    <span ng:bind="a" ng-bind="a" data-ng-bind="a" x-ng-bind="a">

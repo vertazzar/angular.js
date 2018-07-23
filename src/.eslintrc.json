@@ -15,6 +15,9 @@
     "splice": false,
     "push": false,
     "toString": false,
+    "minErrConfig": false,
+    "errorHandlingConfig": false,
+    "isValidObjectMaxDepth": false,
     "ngMinErr": false,
     "_angular": false,
     "angularModule": false,
@@ -25,8 +28,6 @@
     "REGEX_STRING_REGEXP" : false,
     "lowercase": false,
     "uppercase": false,
-    "manualLowercase": false,
-    "manualUppercase": false,
     "isArrayLike": false,
     "forEach": false,
     "forEachSorted": false,
@@ -47,6 +48,7 @@
     "isNumber": false,
     "isNumberNaN": false,
     "isDate": false,
+    "isError": false,
     "isArray": false,
     "isFunction": false,
     "isRegExp": false,
@@ -66,6 +68,7 @@
     "arrayRemove": false,
     "copy": false,
     "shallowCopy": false,
+    "simpleCompare": false,
     "equals": false,
     "csp": false,
     "concat": false,
@@ -74,6 +77,7 @@
     "toJsonReplacer": false,
     "toJson": false,
     "fromJson": false,
+    "addDateMinutes": false,
     "convertTimezoneToLocal": false,
     "timezoneToOffset": false,
     "startingTag": false,
@@ -150,17 +154,22 @@
 
     /* apis.js */
     "hashKey": false,
-    "HashMap": false,
+    "NgMap": false,
 
     /* urlUtils.js */
     "urlResolve": false,
     "urlIsSameOrigin": false,
+    "urlIsSameOriginAsBaseUrl": false,
+    "urlIsAllowedOriginFactory": false,
 
     /* ng/controller.js */
     "identifierForController": false,
 
     /* ng/compile.js */
     "directiveNormalize": false,
+
+    /* ng/q.js */
+    "markQExceptionHandled": false,
 
     /* ng/directive/directives.js */
     "ngDirective": false,
